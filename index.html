@@ -446,18 +446,17 @@ async function loadFromCloud() {
   }
 }
 
+// ☁️ 구글 클라우드 시트에 실시간 데이터 쓰기
 async function saveToCloud() {
   if(!GOOGLE_WEB_APP_URL || GOOGLE_WEB_APP_URL.includes("여기에_복사한")) return;
   setStatus("변경사항 클라우드 저장 중...");
   try {
     const payload = { logs: logs, sites: sites };
-    const res = await fetch(GOOGLE_WEB_APP_URL, {
+    await fetch(GOOGLE_WEB_APP_URL, {
       method: "POST",
       body: JSON.stringify(payload),
       headers: { "Content-Type": "text/plain" }
     });
-    // 저장 후 즉시 최신 데이터 다시 불러와서 모두 동기화
-    await loadFromCloud();
     setStatus("✓ 변경사항 클라우드 저장 완료", "success");
   } catch(e) {
     console.error(e);
@@ -880,11 +879,6 @@ document.getElementById('io-date').value = new Date().toISOString().slice(0,10);
 
 // 페이지가 로드되면 자동으로 클라우드 데이터를 불러옵니다.
 loadFromCloud();
-
-// ★ 30초마다 자동으로 최신 데이터 새로고침 (동료가 등록한 내용 반영)
-setInterval(() => {
-  loadFromCloud();
-}, 30000);
 </script>
 
 
