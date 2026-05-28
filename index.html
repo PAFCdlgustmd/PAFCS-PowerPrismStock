@@ -431,16 +431,15 @@ async function loadFromCloud() {
     const res = await fetch(`${GOOGLE_WEB_APP_URL}?action=read`);
     const data = await res.json();
     if(data.logs) logs = data.logs.map(l => {
-      // qty 숫자 강제 변환
       l.qty = Number(l.qty) || 0;
-      // 날짜 YYYY-MM-DD 형식으로 정규화
+      // 날짜가 YYYY-MM-DD 형식이 아니면 변환
       if (l.date && !l.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
         const d = new Date(l.date);
         if (!isNaN(d.getTime())) {
           const y = d.getFullYear();
-          const m = String(d.getMonth()+1).padStart(2,'0');
-          const day = String(d.getDate()).padStart(2,'0');
-          l.date = `${y}-${m}-${day}`;
+          const mo = String(d.getMonth()+1).padStart(2,'0');
+          const dy = String(d.getDate()).padStart(2,'0');
+          l.date = `${y}-${mo}-${dy}`;
         }
       }
       return l;
@@ -478,23 +477,16 @@ async function saveToCloud() {
 
 function formatDate(dateStr) {
   if (!dateStr) return '-';
+  // YYYY-MM-DD 형식 파싱 (시간대 오류 방지)
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return dateStr;
+  const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+  if (isNaN(d.getTime())) return dateStr;
   const days = ['일요일','월요일','화요일','수요일','목요일','금요일','토요일'];
-  // YYYY-MM-DD 형식인 경우 (정상)
-  const simple = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (simple) {
-    const d = new Date(Number(simple[1]), Number(simple[2])-1, Number(simple[3]));
-    return `${dateStr} ${days[d.getDay()]}`;
-  }
-  // 그 외 형식 (구글 시트에서 변환된 긴 문자열 등)
-  const d = new Date(dateStr);
-  if (!isNaN(d.getTime())) {
-    const y = d.getFullYear();
-    const m = String(d.getMonth()+1).padStart(2,'0');
-    const day = String(d.getDate()).padStart(2,'0');
-    return `${y}-${m}-${day} ${days[d.getDay()]}`;
-  }
-  return dateStr;
+  return `${dateStr} ${days[d.getDay()]}`;
 }
+
+function status(q){
   if(q<=5)  return '<span class="badge b-danger">부족</span>';
   if(q<=20) return '<span class="badge b-warn">주의</span>';
   return '<span class="badge b-ok">정상</span>';
