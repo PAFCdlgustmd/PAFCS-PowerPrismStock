@@ -455,6 +455,8 @@ async function saveToCloud() {
       body: JSON.stringify(payload),
       headers: { "Content-Type": "text/plain" }
     });
+    // 저장 후 즉시 최신 데이터 다시 불러와서 모든 사용자 동기화
+    await loadFromCloud();
     setStatus("✓ 변경사항 클라우드 저장 완료", "success");
   } catch(e) {
     console.error(e);
@@ -877,6 +879,9 @@ document.getElementById('io-date').value = new Date().toISOString().slice(0,10);
 
 // 페이지가 로드되면 자동으로 클라우드 데이터를 불러옵니다.
 loadFromCloud();
+
+// 30초마다 자동으로 최신 데이터 새로고침 (동료 등록 내용 자동 반영)
+setInterval(() => { loadFromCloud(); }, 30000);
 </script>
 
 
