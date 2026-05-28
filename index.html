@@ -271,10 +271,6 @@ tr:hover td{background:#E6F1FB;}
           <option value="in">입고</option>
         </select>
         <select id="io-item"><option value="">품목 선택</option><option value="레진(후지전기)">레진(후지전기)</option><option value="레진(삼양사)">레진(삼양사)</option><option value="물필터">물필터</option><option value="레진헤드">레진헤드</option><option value="집수봉">집수봉</option><option value="활성탄필터">활성탄필터</option><option value="마이크로필터">마이크로필터</option><option value="인버터필터">인버터필터</option><option value="개질기필터">개질기필터</option><option value="GS-23">GS-23</option><option value="GS-6">GS-6</option><option value="방열팬">방열팬</option></select>
-        <div style="display:flex;gap:6px;margin-top:6px;">
-  <input type="text" id="new-item-input" placeholder="새로운 품목명 입력" style="flex:1;font-size:13px;padding:8px 10px;border:0.5px solid #ccc;border-radius:8px;outline:none;">
-  <button type="button" onclick="addItem()" style="background:#1D9E75;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer;font-weight:500;white-space:nowrap;">품목 추가</button>
-</div>
       </div>
 
       <div class="input-row" style="align-items:center;">
@@ -288,15 +284,6 @@ tr:hover td{background:#E6F1FB;}
         <input type="text" id="io-hogi" placeholder="호기 (예: 3, 5, 없으면 비워두세요)" style="flex:1;">
       </div>
 
-      <div class="site-mgmt" id="site-mgmt-box">
-        <div class="site-mgmt-title"><i class="ti ti-building"></i> 현장 관리</div>
-        <div class="new-site-row">
-          <input type="text" id="new-site-input" placeholder="새 현장명 입력 (예: 유일산업)">
-          <button class="btn-add-site" onclick="addSite()"><i class="ti ti-plus"></i> 추가</button>
-          <button class="btn-del-site" onclick="delSite()"><i class="ti ti-trash"></i> 삭제</button>
-        </div>
-      </div>
-
       <div class="input-row">
         <input type="text" id="io-date" placeholder="날짜 (예: 2026-05-20)" style="flex:1;">
       </div>
@@ -307,6 +294,21 @@ tr:hover td{background:#E6F1FB;}
       <div id="io-msg"></div>
 
       <div class="bulk-section">
+        <!-- 품목 추가 -->
+        <div style="display:flex;gap:6px;margin-bottom:10px;">
+          <input type="text" id="new-item-input" placeholder="새로운 품목명 입력" style="flex:1;font-size:13px;padding:8px 10px;border:0.5px solid #ccc;border-radius:8px;outline:none;">
+          <button type="button" onclick="addItem()" style="background:#1D9E75;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer;font-weight:500;white-space:nowrap;">품목 추가</button>
+        </div>
+        <!-- 현장 관리 -->
+        <div class="site-mgmt" id="site-mgmt-box" style="margin-bottom:14px;">
+          <div class="site-mgmt-title"><i class="ti ti-building"></i> 현장 관리</div>
+          <div class="new-site-row">
+            <input type="text" id="new-site-input" placeholder="새 현장명 입력 (예: 유일산업)">
+            <button class="btn-add-site" onclick="addSite()"><i class="ti ti-plus"></i> 추가</button>
+            <button class="btn-del-site" onclick="delSite()"><i class="ti ti-trash"></i> 삭제</button>
+          </div>
+        </div>
+
         <div class="sec-title" style="color: #27500A;"><i class="ti ti-file-spreadsheet"></i> 엑셀 대량 붙여넣기 등록</div>
         <p style="font-size:11px; color:#666; margin-bottom:8px;">
           엑셀에서 <b>[ 날짜 | 현장명 | 호기 | 품목명 | 수량 ]</b> 순서로 범위를 복사(Ctrl+C) 후 아래에 붙여넣기(Ctrl+V) 하세요.
@@ -430,20 +432,7 @@ async function loadFromCloud() {
   try {
     const res = await fetch(`${GOOGLE_WEB_APP_URL}?action=read`);
     const data = await res.json();
-    if(data.logs) logs = data.logs.map(l => {
-      l.qty = Number(l.qty) || 0;
-      // 날짜가 YYYY-MM-DD 형식이 아니면 변환
-      if (l.date && !l.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
-        const d = new Date(l.date);
-        if (!isNaN(d.getTime())) {
-          const y = d.getFullYear();
-          const mo = String(d.getMonth()+1).padStart(2,'0');
-          const dy = String(d.getDate()).padStart(2,'0');
-          l.date = `${y}-${mo}-${dy}`;
-        }
-      }
-      return l;
-    });
+    if(data.logs) logs = data.logs.map(l => ({ ...l, qty: Number(l.qty) || 0 }));
     if(data.sites) sites = data.sites;
     
     updateYearSelectOptions();
@@ -485,8 +474,6 @@ function formatDate(dateStr) {
   const days = ['일요일','월요일','화요일','수요일','목요일','금요일','토요일'];
   return `${dateStr} ${days[d.getDay()]}`;
 }
-
-function status(q){
   if(q<=5)  return '<span class="badge b-danger">부족</span>';
   if(q<=20) return '<span class="badge b-warn">주의</span>';
   return '<span class="badge b-ok">정상</span>';
