@@ -51,7 +51,7 @@ tr:hover td{background:#E6F1FB;}
 .btn-del-site:hover{background:#F7C1C1;}
 .log-row{display:flex;gap:10px;padding:10px 0;border-bottom:0.5px solid #eee;font-size:13px;align-items:center;}
 .log-row:last-child{border-bottom:none;}
-.log-date{color:#888;font-size:11px;min-width:76px;}
+.log-date{color:#888;font-size:11px;min-width:110px;}
 .log-site{min-width:72px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .log-item{flex:1;}
 .log-qty{min-width:36px;text-align:right;font-weight:500;color:#0C447C;}
@@ -430,7 +430,7 @@ async function loadFromCloud() {
   try {
     const res = await fetch(`${GOOGLE_WEB_APP_URL}?action=read`);
     const data = await res.json();
-    if(data.logs) logs = data.logs;
+    if(data.logs) logs = data.logs.map(l => ({ ...l, qty: Number(l.qty) || 0 }));
     if(data.sites) sites = data.sites;
     
     updateYearSelectOptions();
@@ -450,25 +450,28 @@ async function saveToCloud() {
   setStatus("변경사항 클라우드 저장 중...");
   try {
     const payload = { logs: logs, sites: sites };
-    // no-cors: 구글 앱스 스크립트 CORS 정책 우회
     await fetch(GOOGLE_WEB_APP_URL, {
       method: "POST",
-      mode: "no-cors",
       body: JSON.stringify(payload),
       headers: { "Content-Type": "text/plain" }
     });
-    // no-cors는 응답을 읽을 수 없으므로 1.5초 후 다시 불러와서 동기화 확인
-    setStatus("저장 완료, 동기화 중...");
-    setTimeout(async () => {
-      await loadFromCloud();
-    }, 1500);
+    setStatus("✓ 변경사항 클라우드 저장 완료", "success");
   } catch(e) {
     console.error(e);
     setStatus("저장 실패: 클라우드 연결이 일시적으로 끊겼습니다.", "error");
   }
 }
 
-function status(q){
+function formatDate(dateStr) {
+  if (!dateStr) return '-';
+  // YYYY-MM-DD 형식 파싱 (시간대 오류 방지)
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return dateStr;
+  const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+  if (isNaN(d.getTime())) return dateStr;
+  const days = ['일요일','월요일','화요일','수요일','목요일','금요일','토요일'];
+  return `${dateStr} ${days[d.getDay()]}`;
+}
   if(q<=5)  return '<span class="badge b-danger">부족</span>';
   if(q<=20) return '<span class="badge b-warn">주의</span>';
   return '<span class="badge b-ok">정상</span>';
@@ -743,7 +746,7 @@ function renderLog(){
   
   el.innerHTML=filtered.map(l=>`
     <div class="log-row">
-      <span class="log-date">${l.date || '-'}</span>
+      <span class="log-date">${formatDate(l.date)}</span>
       <span class="badge ${l.type==='in'?'b-in':'b-out'}">${l.type==='in'?'입고':'출고'}</span>
       <span class="log-site">${l.site||'-'}${l.hogi?' '+l.hogi+'호기':''}</span>
       <span class="log-item">${l.item}</span>
@@ -883,9 +886,6 @@ document.getElementById('io-date').value = new Date().toISOString().slice(0,10);
 
 // 페이지가 로드되면 자동으로 클라우드 데이터를 불러옵니다.
 loadFromCloud();
-
-// 30초마다 자동 새로고침 (동료가 등록한 내용 자동 반영)
-setInterval(() => { loadFromCloud(); }, 30000);
 </script>
 
 
