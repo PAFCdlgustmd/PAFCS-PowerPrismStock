@@ -443,7 +443,19 @@ async function loadFromCloud() {
   try {
     const res = await fetch(`${GOOGLE_WEB_APP_URL}?action=read`);
     const data = await res.json();
-    if(data.logs) logs = data.logs.map(l => ({ ...l, qty: Number(l.qty) || 0 }));
+    if(data.logs) logs = data.logs.map(l => {
+      l.qty = Number(l.qty) || 0;
+      if (l.date && !l.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        const d = new Date(l.date);
+        if (!isNaN(d.getTime())) {
+          const y = d.getFullYear();
+          const mo = String(d.getMonth()+1).padStart(2,'0');
+          const dy = String(d.getDate()).padStart(2,'0');
+          l.date = `${y}-${mo}-${dy}`;
+        }
+      }
+      return l;
+    });
     if(data.sites) sites = data.sites;
     
     updateYearSelectOptions();
@@ -485,6 +497,8 @@ function formatDate(dateStr) {
   const days = ['일요일','월요일','화요일','수요일','목요일','금요일','토요일'];
   return `${dateStr} ${days[d.getDay()]}`;
 }
+
+function status(q){
   if(q<=5)  return '<span class="badge b-danger">부족</span>';
   if(q<=20) return '<span class="badge b-warn">주의</span>';
   return '<span class="badge b-ok">정상</span>';
