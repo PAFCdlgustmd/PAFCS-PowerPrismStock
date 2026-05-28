@@ -288,24 +288,35 @@ tr:hover td{background:#E6F1FB;}
         <input type="text" id="io-date" placeholder="날짜 (예: 2026-05-20)" style="flex:1;">
       </div>
       <div class="input-row">
-        <input type="text" id="io-note" placeholder="비고 (선택)">
-        <button class="btn-reg" id="btn-reg-io" onclick="registerIO()"><i class="ti ti-check"></i> 등록</button>
+        <button class="btn-reg" id="btn-reg-io" onclick="registerIO()" style="width:100%;padding:12px;font-size:14px;"><i class="ti ti-check"></i> 등록</button>
+      </div>
+      <div class="input-row">
+        <input type="text" id="io-note" placeholder="비고 (선택)" style="flex:1;">
       </div>
       <div id="io-msg"></div>
 
       <div class="bulk-section">
-        <!-- 품목 추가 -->
-        <div style="display:flex;gap:6px;margin-bottom:10px;">
-          <input type="text" id="new-item-input" placeholder="새로운 품목명 입력" style="flex:1;font-size:13px;padding:8px 10px;border:0.5px solid #ccc;border-radius:8px;outline:none;">
-          <button type="button" onclick="addItem()" style="background:#1D9E75;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer;font-weight:500;white-space:nowrap;">품목 추가</button>
-        </div>
-        <!-- 현장 관리 -->
-        <div class="site-mgmt" id="site-mgmt-box" style="margin-bottom:14px;">
-          <div class="site-mgmt-title"><i class="ti ti-building"></i> 현장 관리</div>
-          <div class="new-site-row">
-            <input type="text" id="new-site-input" placeholder="새 현장명 입력 (예: 유일산업)">
-            <button class="btn-add-site" onclick="addSite()"><i class="ti ti-plus"></i> 추가</button>
-            <button class="btn-del-site" onclick="delSite()"><i class="ti ti-trash"></i> 삭제</button>
+        <!-- 품목 추가 + 현장 관리 통합 박스 -->
+        <div style="background:#f0f5fb;border:1px solid #B5D4F4;border-radius:10px;padding:14px;margin-bottom:16px;">
+          <div style="font-size:12px;font-weight:500;color:#185FA5;margin-bottom:12px;"><i class="ti ti-settings"></i> 품목 · 현장 관리</div>
+
+          <!-- 품목 추가 -->
+          <div style="font-size:11px;color:#555;font-weight:500;margin-bottom:6px;">품목 추가 / 삭제</div>
+          <div style="display:flex;gap:6px;margin-bottom:12px;">
+            <input type="text" id="new-item-input" placeholder="새로운 품목명 입력" style="flex:1;font-size:13px;padding:8px 10px;border:1px solid #B5D4F4;border-radius:8px;outline:none;background:#fff;">
+            <button type="button" onclick="addItem()" style="background:#185FA5;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;font-weight:500;white-space:nowrap;"><i class="ti ti-plus"></i> 추가</button>
+            <button type="button" onclick="deleteItem()" style="background:#FCEBEB;color:#A32D2D;border:1px solid #F7C1C1;border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer;white-space:nowrap;"><i class="ti ti-trash"></i> 삭제</button>
+          </div>
+
+          <!-- 구분선 -->
+          <div style="border-top:1px solid #B5D4F4;margin-bottom:12px;"></div>
+
+          <!-- 현장 관리 -->
+          <div style="font-size:11px;color:#555;font-weight:500;margin-bottom:6px;">현장 관리</div>
+          <div style="display:flex;gap:6px;">
+            <input type="text" id="new-site-input" placeholder="새 현장명 입력 (예: 유일산업)" style="flex:1;font-size:13px;padding:8px 10px;border:1px solid #B5D4F4;border-radius:8px;outline:none;background:#fff;">
+            <button onclick="addSite()" style="background:#185FA5;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;font-weight:500;white-space:nowrap;"><i class="ti ti-plus"></i> 추가</button>
+            <button onclick="delSite()" style="background:#FCEBEB;color:#A32D2D;border:1px solid #F7C1C1;border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer;white-space:nowrap;"><i class="ti ti-trash"></i> 삭제</button>
           </div>
         </div>
 
@@ -565,6 +576,24 @@ async function addItem(){
   input.value = '';
   await saveToCloud();
   alert(`"${name}" 품목이 추가되었습니다.`);
+}
+
+async function deleteItem(){
+  const input = document.getElementById('new-item-input');
+  const name  = input.value.trim();
+  if(!name){ alert('삭제할 품목명을 입력하세요.'); return; }
+  if(!inv.find(i=>i.name===name)){ alert(`"${name}" 품목이 존재하지 않습니다.`); return; }
+  const hasLog = logs.some(l=>l.item===name);
+  if(hasLog){
+    if(!confirm(`"${name}" 품목에 입출고 이력이 있습니다.\n그래도 삭제할까요?\n(이력 데이터는 유지됩니다)`)) return;
+  } else {
+    if(!confirm(`"${name}" 품목을 삭제할까요?`)) return;
+  }
+  inv = inv.filter(i=>i.name!==name);
+  populateSels();
+  input.value = '';
+  await saveToCloud();
+  alert(`"${name}" 품목이 삭제되었습니다.`);
 }
 
 async function addSite(){
