@@ -450,14 +450,18 @@ async function saveToCloud() {
   setStatus("변경사항 클라우드 저장 중...");
   try {
     const payload = { logs: logs, sites: sites };
+    // no-cors: 구글 앱스 스크립트 CORS 정책 우회
     await fetch(GOOGLE_WEB_APP_URL, {
       method: "POST",
+      mode: "no-cors",
       body: JSON.stringify(payload),
       headers: { "Content-Type": "text/plain" }
     });
-    // 저장 후 즉시 최신 데이터 다시 불러와서 모든 사용자 동기화
-    await loadFromCloud();
-    setStatus("✓ 변경사항 클라우드 저장 완료", "success");
+    // no-cors는 응답을 읽을 수 없으므로 1.5초 후 다시 불러와서 동기화 확인
+    setStatus("저장 완료, 동기화 중...");
+    setTimeout(async () => {
+      await loadFromCloud();
+    }, 1500);
   } catch(e) {
     console.error(e);
     setStatus("저장 실패: 클라우드 연결이 일시적으로 끊겼습니다.", "error");
@@ -880,7 +884,7 @@ document.getElementById('io-date').value = new Date().toISOString().slice(0,10);
 // 페이지가 로드되면 자동으로 클라우드 데이터를 불러옵니다.
 loadFromCloud();
 
-// 30초마다 자동으로 최신 데이터 새로고침 (동료 등록 내용 자동 반영)
+// 30초마다 자동 새로고침 (동료가 등록한 내용 자동 반영)
 setInterval(() => { loadFromCloud(); }, 30000);
 </script>
 
