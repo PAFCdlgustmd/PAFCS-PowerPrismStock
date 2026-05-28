@@ -288,6 +288,11 @@ tr:hover td{background:#E6F1FB;}
         <input type="text" id="io-date" placeholder="날짜 (예: 2026-05-20)" style="flex:1;">
       </div>
       <div class="input-row">
+        <select id="io-writer" style="flex:1;font-size:13px;padding:8px 10px;border:0.5px solid #ccc;border-radius:8px;outline:none;">
+          <option value="">작성자 선택</option>
+        </select>
+      </div>
+      <div class="input-row">
         <button class="btn-reg" id="btn-reg-io" onclick="registerIO()" style="width:100%;padding:12px;font-size:14px;"><i class="ti ti-check"></i> 등록</button>
       </div>
       <div class="input-row">
@@ -391,7 +396,7 @@ tr:hover td{background:#E6F1FB;}
 
 <script>
 // ★★★ [중요] 2단계에서 배포한 구글 웹 앱 URL 주소를 여기에 넣어주세요 ★★★
-const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwgIfYe2fLpaXZOhh2B_1R32cm3LFHzEyMYq7H4yrD9wngmPXHQuVUn25DUkIxE3Zh_/exec";
+const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzxDJ3R5UNPIBYRrGy-dudZQOP60h0Hb-cjzbDVb_WAj9i5Ae_nAkevNPLcPUGQoZ8q/exec";
 
 const BASE = [
   {name:"레진(후지전기)",        initial:0},
@@ -414,9 +419,14 @@ const DEFAULT_SITES = [
   "중구수영장", "후지전기"
 ];
 
+const DEFAULT_WRITERS = [
+  "김영수", "이철민", "박준호", "최성훈", "정태원"
+];
+
 let inv = BASE.map(i=>({name:i.name, current:0})); 
 let logs = [];
 let sites = [...DEFAULT_SITES];
+let writers = [...DEFAULT_WRITERS];
 
 function setStatus(text, type='process') {
   const bar = document.getElementById('cloud-bar');
@@ -443,20 +453,9 @@ async function loadFromCloud() {
   try {
     const res = await fetch(`${GOOGLE_WEB_APP_URL}?action=read`);
     const data = await res.json();
-    if(data.logs) logs = data.logs.map(l => {
-      l.qty = Number(l.qty) || 0;
-      if (l.date && !l.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
-        const d = new Date(l.date);
-        if (!isNaN(d.getTime())) {
-          const y = d.getFullYear();
-          const mo = String(d.getMonth()+1).padStart(2,'0');
-          const dy = String(d.getDate()).padStart(2,'0');
-          l.date = `${y}-${mo}-${dy}`;
-        }
-      }
-      return l;
-    });
+    if(data.logs) logs = data.logs.map(l => ({ ...l, qty: Number(l.qty) || 0 }));
     if(data.sites) sites = data.sites;
+    if(data.writers && data.writers.length > 0) writers = data.writers;
     
     updateYearSelectOptions();
     renderInv();
@@ -474,7 +473,7 @@ async function saveToCloud() {
   if(!GOOGLE_WEB_APP_URL || GOOGLE_WEB_APP_URL.includes("여기에_복사한")) return;
   setStatus("변경사항 클라우드 저장 중...");
   try {
-    const payload = { logs: logs, sites: sites };
+    const payload = { logs: logs, sites: sites, writers: writers };
     await fetch(GOOGLE_WEB_APP_URL, {
       method: "POST",
       body: JSON.stringify(payload),
@@ -644,38 +643,47 @@ function populateSels(){
     lf.innerHTML += `<option value="${i.name}">${i.name}</option>`;
   });
   renderSiteSel();
+  // 작성자 드롭다운 채우기
+  const ws = document.getElementById('io-writer');
+  const prevW = ws.value;
+  ws.innerHTML = '<option value="">작성자 선택</option>';
+  writers.forEach(w => { ws.innerHTML += `<option value="${w}">${w}</option>`; });
+  if(prevW) ws.value = prevW;
 }
 
 async function registerIO(){
-  const type = document.getElementById('io-type').value;
-  const item = document.getElementById('io-item').value;
-  const site = document.getElementById('io-site-sel').value;
-  const qty  = parseInt(document.getElementById('io-qty').value);
-  const note = document.getElementById('io-note').value.trim();
-  const hogs = document.getElementById('io-hogi').value.trim();
-  const dateVal = document.getElementById('io-date').value;
-  const msg  = document.getElementById('io-msg');
-  if(!item){ msg.className='msg-err'; msg.textContent='품목을 선택하세요.'; return; }
-  if(!site){ msg.className='msg-err'; msg.textContent='현장을 선택하세요.'; return; }
+  const type   = document.getElementById('io-type').value;
+  const item   = document.getElementById('io-item').value;
+  const site   = document.getElementById('io-site-sel').value;
+  const qty    = parseInt(document.getElementById('io-qty').value);
+  const note   = document.getElementById('io-note').value.trim();
+  const hogs   = document.getElementById('io-hogi').value.trim();
+  const dateVal= document.getElementById('io-date').value;
+  const writer = document.getElementById('io-writer').value;
+  const msg    = document.getElementById('io-msg');
+  if(!item)  { msg.className='msg-err'; msg.textContent='품목을 선택하세요.'; return; }
+  if(!site)  { msg.className='msg-err'; msg.textContent='현장을 선택하세요.'; return; }
   if(!qty||qty<1){ msg.className='msg-err'; msg.textContent='수량을 입력하세요.'; return; }
-  
+  if(!writer){ msg.className='msg-err'; msg.textContent='작성자를 선택하세요.'; return; }
+
   const it = inv.find(i=>i.name===item);
   if(type==='out' && it.current < qty){ msg.className='msg-err'; msg.textContent=`재고 부족 (현재: ${it.current}개)`; return; }
   const today = dateVal || new Date().toISOString().slice(0,10);
-  
+
   const uniqueId = Date.now() + '-' + Math.floor(Math.random()*1000);
-  logs.unshift({id:uniqueId, date:today, type, item, site, hogi:hogs, qty, note});
-  
+  logs.unshift({id:uniqueId, date:today, type, item, site, hogi:hogs, qty, note, writer});
+
   updateYearSelectOptions();
   renderInv();
   renderLog();
-  
+
   msg.className='msg-ok';
-  msg.textContent=`✓ ${item} ${type==='in'?'입고':'출고'} ${qty}개 등록 완료`;
+  msg.textContent=`✓ ${item} ${type==='in'?'입고':'출고'} ${qty}개 등록 완료 (${writer})`;
   document.getElementById('io-qty').value='';
   document.getElementById('io-note').value='';
   document.getElementById('io-hogi').value='';
   document.getElementById('io-date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('io-writer').value='';
   setTimeout(()=>msg.textContent='',3000);
 
   await saveToCloud();
@@ -796,6 +804,7 @@ function renderLog(){
       <span class="log-site">${l.site||'-'}${l.hogi?' '+l.hogi+'호기':''}</span>
       <span class="log-item">${l.item}</span>
       <span class="log-qty">${l.qty}개</span>
+      <span style="min-width:52px;font-size:11px;color:#185FA5;font-weight:500;">${l.writer||''}</span>
       <span class="log-note">${l.note||''}</span>
       <button class="btn-log-del" onclick="deleteLog('${l.id}')">삭제</button>
     </div>
