@@ -111,6 +111,88 @@ tr:hover td{background:#E6F1FB;}
 .cloud-status { display: flex; align-items: center; gap: 6px; }
 .btn-sync { background: #185FA5; color: #fff; border: none; border-radius: 4px; padding: 4px 8px; font-size: 11px; cursor: pointer; }
 .btn-sync:hover { background: #0C447C; }
+
+/* 📱 모바일 반응형 */
+@media (max-width: 540px) {
+  body { padding: 0.75rem; }
+
+  /* 상단 요약 카드: 2x2 그리드 */
+  .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .sc-val { font-size: 18px; }
+
+  /* 탭 버튼: 아이콘+텍스트 줄바꿈 방지, 폰트 축소 */
+  .tab { font-size: 11px; padding: 8px 4px; }
+
+  /* 이력 탭: 가로 flex → 카드형 세로 레이아웃 */
+  .log-row {
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 10px 8px;
+    position: relative;
+  }
+  .log-date {
+    font-size: 11px;
+    min-width: unset;
+    width: 100%;
+    color: #aaa;
+    margin-bottom: 2px;
+  }
+  .log-site {
+    font-size: 13px;
+    font-weight: 600;
+    min-width: unset;
+    max-width: 55%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .log-item {
+    font-size: 13px;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .log-qty {
+    font-size: 13px;
+    font-weight: 600;
+    color: #185FA5;
+    min-width: unset;
+  }
+  .log-note {
+    font-size: 11px;
+    color: #aaa;
+    width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .btn-log-del {
+    margin-left: auto;
+    padding: 4px 10px;
+    font-size: 11px;
+  }
+
+  /* 이력 필터: 세로 스택 */
+  .log-filter-row-1 { flex-direction: column; gap: 6px; }
+  .log-filter-row-1 select { width: 100%; font-size: 13px; }
+  .log-filter-row-2 { flex-wrap: wrap; gap: 6px; }
+  .log-sort-order { flex: 1; min-width: 0; }
+
+  /* 입출고 탭: input-row 세로 스택 */
+  .input-row { flex-wrap: wrap; gap: 6px; }
+  .input-row select, .input-row input { flex: 1 1 calc(50% - 3px); min-width: 0; }
+  .site-wrap { flex: 1 1 100%; }
+  .btn-reg { width: 100%; padding: 12px; font-size: 14px; }
+
+  /* 현장/품목 관리 박스 버튼 */
+  .btn-add-site, .btn-del-site { padding: 8px 10px; font-size: 12px; }
+
+  /* 분석 탭 버튼: 2x2 */
+  #tab-analysis .an-filter { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  #tab-analysis > div:first-child > div:last-child { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  #tab-analysis > div:first-child > div:last-child button { font-size: 11px; padding: 7px 4px; }
+}
 </style>
 </head>
 <body>
@@ -845,7 +927,7 @@ function renderLog(){
       <span class="log-site">${l.site||'-'}${(l.hogi!==undefined&&l.hogi!==null&&l.hogi!=='')?' '+l.hogi+'호기':''}</span>
       <span class="log-item">${l.item}</span>
       <span class="log-qty">${l.qty}개</span>
-      <span class="log-note">${l.note||''}</span>
+      ${l.note?`<span class="log-note">${l.note}</span>`:''}
       <button class="btn-log-del" onclick="deleteLog('${l.id}')">삭제</button>
     </div>
   `).join('');
