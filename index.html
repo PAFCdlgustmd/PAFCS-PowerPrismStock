@@ -75,12 +75,16 @@ tr:hover td{background:#E6F1FB;}
 .chart-wrap{background:#fff;border:0.5px solid #ddd;border-radius:12px;padding:1rem 1.25rem;margin-bottom:1.25rem;}
 .chart-title{font-size:13px;font-weight:500;color:#185FA5;margin-bottom:12px;}
 .chart-canvas{width:100%;height:240px;}
-.an-table-wrap{background:#fff;border:0.5px solid #ddd;border-radius:12px;overflow:auto;margin-bottom:1.25rem;}
-.an-table{width:100%;border-collapse:collapse;font-size:12px;}
-.an-table th{padding:8px 10px;background:#E6F1FB;color:#185FA5;font-weight:500;border-bottom:0.5px solid #B5D4F4;text-align:center;white-space:nowrap;}
-.an-table td{padding:8px 10px;border-bottom:0.5px solid #eee;text-align:center;color:#222;}
+.an-table-wrap{background:#fff;border:0.5px solid #ddd;border-radius:12px;overflow-x:auto;overflow-y:visible;margin-bottom:1.25rem;}
+.an-table{width:auto;min-width:100%;border-collapse:separate;border-spacing:0;font-size:12px;}
+.an-table th{padding:7px 10px;background:#E6F1FB;color:#185FA5;font-weight:500;border-bottom:0.5px solid #B5D4F4;text-align:center;white-space:nowrap;position:sticky;top:0;z-index:1;}
+.an-table td{padding:7px 10px;border-bottom:0.5px solid #eee;text-align:center;color:#222;white-space:nowrap;}
 .an-table tr:last-child td{border-bottom:none;font-weight:500;background:#f8fafd;}
-.an-table td:first-child{text-align:left;font-weight:500;}
+.an-table td:first-child,.an-table th:first-child{text-align:left;font-weight:500;position:sticky;left:0;z-index:2;background:#E6F1FB;min-width:90px;max-width:90px;overflow:hidden;text-overflow:ellipsis;}
+.an-table td:first-child{background:#fff;}
+.an-table tr:last-child td:first-child{background:#f8fafd;}
+.an-table th.yr-header{background:#d4e8f8;color:#0C447C;font-size:11px;padding:4px 10px;border-bottom:0.5px solid #B5D4F4;}
+.an-table th.yr-header:first-child{position:sticky;left:0;z-index:3;}
 
 .bulk-section { margin-top: 20px; border-top: 2px dashed #B5D4F4; padding-top: 20px; }
 .bulk-textarea { width: 100%; height: 100px; padding: 10px; font-size: 12px; border: 1px solid #ccc; border-radius: 8px; font-family: monospace; resize: vertical; outline: none; }
@@ -991,7 +995,12 @@ function drawMonthlyTrend(outLogs, item, site, year, filterDesc){
   ]);
 
   // 테이블
-  const tHead = `<tr><th>${item?'현장':'품목'}</th>${months.map(m=>`<th>${parseInt(m.slice(5))}월</th>`).join('')}<th>합계</th></tr>`;
+  // 연도 그룹 계산
+  const yearGroups = [];
+  months.forEach(m=>{ const y=m.slice(0,4); const last=yearGroups[yearGroups.length-1]; if(last&&last.year===y){last.count++;}else{yearGroups.push({year:y,count:1});} });
+  const yearRow = `<tr><th class="yr-header">${item?'현장':'품목'}</th>${yearGroups.map(g=>`<th class="yr-header" colspan="${g.count}">${g.year}년</th>`).join('')}<th class="yr-header">합계</th></tr>`;
+  const monthRow = `<tr><th></th>${months.map(m=>`<th>${parseInt(m.slice(5))}월</th>`).join('')}<th>합계</th></tr>`;
+  const tHead = yearRow + monthRow;
   const tBody = groups.map(g => {
     const filtered = outLogs.filter(l => item ? (l.site||'-')===g : l.item===g);
     const cells = months.map(m => filtered.filter(l=>l.date&&l.date.slice(0,7)===m).reduce((a,l)=>a+l.qty,0));
