@@ -606,6 +606,14 @@ async function loadFromCloud() {
     }));
     if(data.sites) sites = data.sites;
     if(data.writers) writers = data.writers;
+    // 품목 목록을 클라우드에서 불러와서 inv 업데이트
+    if(data.items && data.items.length > 0) {
+      data.items.forEach(itemName => {
+        if(!inv.find(i=>i.name===itemName)) {
+          inv.push({name: itemName, current: 0});
+        }
+      });
+    }
     
     updateYearSelectOptions();
     renderInv();
@@ -620,7 +628,7 @@ async function loadFromCloud() {
 }
 
 // ☁️ 구글 클라우드 시트에 실시간 데이터 쓰기
-// ☁️ 공통 POST 함수
+// ☁️ 공통 POST 함수 (백그라운드, UI 멈춤 없음)
 function cloudPost(payload) {
   if(!GOOGLE_WEB_APP_URL || GOOGLE_WEB_APP_URL.includes("여기에_복사한")) return;
   fetch(GOOGLE_WEB_APP_URL, {
@@ -628,27 +636,23 @@ function cloudPost(payload) {
     mode: "no-cors",
     body: JSON.stringify(payload),
     headers: { "Content-Type": "text/plain" }
-  }).catch(e => console.error('클라우드 저장 오류:', e));
+  }).catch(e => console.error('클라우드 오류:', e));
 }
 
-// ☁️ 1건만 append (빠름)
-function appendToCloud(log) {
-  cloudPost({ action: 'append', log });
-}
+// ☁️ 1건 추가 (빠름)
+function appendToCloud(log) { cloudPost({ action: 'append', log }); }
 
-// ☁️ id로 1행 삭제 (빠름)
-function deleteFromCloud(id) {
-  cloudPost({ action: 'delete', id });
-}
+// ☁️ 1건 삭제 (빠름)
+function deleteFromCloud(id) { cloudPost({ action: 'delete', id }); }
 
-// ☁️ 현장·작성자만 저장 (빠름)
+// ☁️ 현장·작성자·품목 저장 (빠름)
 function saveMetaToCloud() {
-  cloudPost({ action: 'saveMeta', sites, writers });
+  cloudPost({ action: 'saveMeta', sites, writers, items: inv.map(i=>i.name) });
 }
 
-// ☁️ 전체 저장 (대량등록·전체삭제 시 사용)
+// ☁️ 전체 저장 (대량등록·전체삭제)
 function saveToCloud() {
-  cloudPost({ logs, sites, writers });
+  cloudPost({ logs, sites, writers, items: inv.map(i=>i.name) });
 }
 
 function formatDate(dateStr) {
@@ -780,6 +784,7 @@ async function addSite(){
   if(!name){ alert('현장명을 입력하세요.'); return; }
   if(sites.includes(name)){ alert('이미 존재하는 현장입니다.'); return; }
   sites.push(name);
+  
   renderSiteSel();
   document.getElementById('io-site-sel').value = name;
   input.value = '';
@@ -792,6 +797,7 @@ async function delSite(){
   if(!name){ alert('삭제할 현장을 먼저 선택하세요.'); return; }
   if(!confirm(`"${name}" 현장을 목록에서 삭제할까요?\n(이미 등록된 이력은 유지됩니다)`)) return;
   sites = sites.filter(s=>s!==name);
+  
   renderSiteSel();
   saveMetaToCloud();
 }
@@ -962,6 +968,7 @@ async function registerBulk() {
   
   msg.className = 'msg-ok'; msg.textContent = `✓ 총 ${successCount}건이 클라우드에 성공적으로 반영되었습니다.`;
   parsedRows = [];
+
   saveToCloud();
 }
 
@@ -1005,6 +1012,7 @@ async function deleteLog(logId) {
   const targetIndex = logs.findIndex(l => l.id === logId);
   if (targetIndex === -1) return;
   if(!confirm(`선택한 한 건의 이력을 삭제하겠습니까?`)) return;
+
   logs.splice(targetIndex, 1);
   updateYearSelectOptions();
   renderInv();
@@ -1021,7 +1029,7 @@ async function clearAllLogs() {
   updateYearSelectOptions();
   renderInv();
   renderLog();
-  // 전체 삭제는 전체 저장
+
   saveToCloud();
 }
 
