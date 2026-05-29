@@ -472,21 +472,34 @@ async function loadFromCloud() {
       qty: Number(l.qty) || 0,
       hogi: (l.hogi !== undefined && l.hogi !== null && l.hogi !== '') ? String(l.hogi) : '',
       date: (()=>{
-        const s = String(l.date || '').trim();
+        const raw = l.date;
+        if(!raw && raw !== 0) return '';
+        const s = String(raw).trim();
+        // YYYY-MM-DD
         if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-        if(/^\d{4}\/\d{2}\/\d{2}$/.test(s)) return s.replace(/\//g,'-');
-        if(/^\d{4}\/\d{1,2}\/\d{1,2}$/.test(s)){
-          const [y,mo,d]=s.split('/');
-          return `${y}-${mo.padStart(2,'0')}-${d.padStart(2,'0')}`;
-        }
+        // YYYY/M/D or YYYY/MM/DD
+        const slash = s.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
+        if(slash) return slash[1]+'-'+slash[2].padStart(2,'0')+'-'+slash[3].padStart(2,'0');
+        // 엑셀 시리얼 숫자
         const n = Number(s);
-        if(!isNaN(n) && n > 40000){
+        if(!isNaN(n) && n > 40000 && n < 100000){
           const dt = new Date(Math.round((n-25569)*86400*1000));
-          return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth()+1).padStart(2,'0')}-${String(dt.getUTCDate()).padStart(2,'0')}`;
+          return dt.getUTCFullYear()+'-'+String(dt.getUTCMonth()+1).padStart(2,'0')+'-'+String(dt.getUTCDate()).padStart(2,'0');
         }
+        // 구글 Date 직렬화: Date(2024,4,29)
+        const gd = s.match(/Date\((\d+),(\d+),(\d+)\)/);
+        if(gd) return gd[1]+'-'+String(Number(gd[2])+1).padStart(2,'0')+'-'+gd[3].padStart(2,'0');
+        // JS Date 문자열 (ISO, UTC, locale 등)
+        const jd = new Date(s);
+        if(!isNaN(jd.getTime()) && jd.getFullYear() > 2000){
+          return jd.getFullYear()+'-'+String(jd.getMonth()+1).padStart(2,'0')+'-'+String(jd.getDate()).padStart(2,'0');
+        }
+        // YYYY.MM.DD
+        const dot = s.match(/^(\d{4})\.(\d{1,2})\.(\d{1,2})/);
+        if(dot) return dot[1]+'-'+dot[2].padStart(2,'0')+'-'+dot[3].padStart(2,'0');
         return s;
       })()
-    })).filter(l => /^\d{4}-\d{2}-\d{2}$/.test(l.date));
+    }));
     if(data.sites) sites = data.sites;
     
     updateYearSelectOptions();
@@ -940,7 +953,8 @@ function renderAnalysis(){
 // ── 월별 출고 추이 ──
 function drawMonthlyTrend(outLogs, item, site, year, filterDesc){
   document.getElementById('an-chart-title').textContent = `월별 출고 추이 — ${filterDesc}`;
-  const months = [...new Set(outLogs.filter(l=>/^\d{4}-\d{2}-\d{2}$/.test(l.date)).map(l=>l.date.slice(0,7)))].sort();
+  const validLogs = outLogs.filter(l=>l.date&&/^\d{4}-\d{2}/.test(l.date));
+  const months = [...new Set(validLogs.map(l=>l.date.slice(0,7)))].sort();
 
   // 그룹: 품목이 지정되면 현장별, 아니면 품목별 (최대 6개)
   let groups = item
@@ -952,7 +966,7 @@ function drawMonthlyTrend(outLogs, item, site, year, filterDesc){
     const filtered = outLogs.filter(l => item ? (l.site||'-')===g : l.item===g);
     return {
       label: g,
-      data: months.map(m => filtered.filter(l=>l.date.slice(0,7)===m).reduce((a,l)=>a+l.qty,0)),
+      data: months.map(m => filtered.filter(l=>l.date&&l.date.slice(0,7)===m).reduce((a,l)=>a+l.qty,0)),
       borderColor: CHART_COLORS[i%CHART_COLORS.length],
       backgroundColor: CHART_COLORS[i%CHART_COLORS.length]+'33',
       tension: 0.3, pointRadius: 5, fill: false
@@ -969,7 +983,7 @@ function drawMonthlyTrend(outLogs, item, site, year, filterDesc){
 
   // 요약 카드
   const total = outLogs.reduce((a,l)=>a+l.qty,0);
-  const maxM  = months.reduce((a,m)=>{ const s=outLogs.filter(l=>l.date.slice(0,7)===m).reduce((x,l)=>x+l.qty,0); return s>a.v?{m,v:s}:a; },{m:'-',v:0});
+  const maxM  = months.reduce((a,m)=>{ const s=validLogs.filter(l=>l.date.slice(0,7)===m).reduce((x,l)=>x+l.qty,0); return s>a.v?{m,v:s}:a; },{m:'-',v:0});
   renderSummaryCards([
     {label:'총 출고량', value:total+'개', color:'#185FA5'},
     {label:'최다 출고월', value:(()=>{ const p=maxM.m.split('-'); return p.length===2?p[0]+'년 '+parseInt(p[1])+'월':maxM.m; })(), color:'#1D9E75'},
@@ -980,10 +994,10 @@ function drawMonthlyTrend(outLogs, item, site, year, filterDesc){
   const tHead = `<tr><th>${item?'현장':'품목'}</th>${months.map(m=>`<th>${parseInt(m.slice(5))}월</th>`).join('')}<th>합계</th></tr>`;
   const tBody = groups.map(g => {
     const filtered = outLogs.filter(l => item ? (l.site||'-')===g : l.item===g);
-    const cells = months.map(m => filtered.filter(l=>l.date.slice(0,7)===m).reduce((a,l)=>a+l.qty,0));
+    const cells = months.map(m => filtered.filter(l=>l.date&&l.date.slice(0,7)===m).reduce((a,l)=>a+l.qty,0));
     return `<tr><td style="font-weight:500">${g}</td>${cells.map(v=>`<td>${v||'-'}</td>`).join('')}<td style="font-weight:500;color:#185FA5">${cells.reduce((a,v)=>a+v,0)}</td></tr>`;
   });
-  const totals = months.map(m=>outLogs.filter(l=>l.date.slice(0,7)===m).reduce((a,l)=>a+l.qty,0));
+  const totals = months.map(m=>validLogs.filter(l=>l.date.slice(0,7)===m).reduce((a,l)=>a+l.qty,0));
   tBody.push(`<tr style="background:#E6F1FB;font-weight:500"><td>합계</td>${totals.map(v=>`<td>${v||'-'}</td>`).join('')}<td style="color:#185FA5">${totals.reduce((a,v)=>a+v,0)}</td></tr>`);
   document.getElementById('an-table').innerHTML = `<thead>${tHead}</thead><tbody>${tBody.join('')}</tbody>`;
 }
@@ -991,7 +1005,7 @@ function drawMonthlyTrend(outLogs, item, site, year, filterDesc){
 // ── 연별 출고 비교 ──
 function drawYearlyCompare(outLogs, item, site, filterDesc){
   document.getElementById('an-chart-title').textContent = `연별 출고 비교 — ${filterDesc}`;
-  const years = [...new Set(outLogs.filter(l=>/^\d{4}-\d{2}-\d{2}$/.test(l.date)).map(l=>l.date.slice(0,4)))].sort();
+  const years = [...new Set(outLogs.filter(l=>l.date&&/^\d{4}-/.test(l.date)).map(l=>l.date.slice(0,4)))].sort();
   const months12 = ['01','02','03','04','05','06','07','08','09','10','11','12'];
 
   const datasets = years.map((y,i) => ({
