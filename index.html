@@ -517,7 +517,7 @@ tr:hover td{background:#E6F1FB;}
 
 <script>
 // ★★★ [중요] 2단계에서 배포한 구글 웹 앱 URL 주소를 여기에 넣어주세요 ★★★
-const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyJ92n3t_PSKdTD5pdUbVp-eZ6wHh3dzWZQmN8Ies3mkC2UqXg017MmyX3lUw8frCTv/exec";
+const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxDbbHfgP4WHxp2wK6MSNJDjC0zDEsJzs9iv7xbeKe6MpwKznlS-r9JJg0-Lr_snljc/exec";
 
 const BASE = [
   {name:"레진(후지전기)",        initial:0},
@@ -620,20 +620,54 @@ async function loadFromCloud() {
 }
 
 // ☁️ 구글 클라우드 시트에 실시간 데이터 쓰기
+// 전체 덮어쓰기 (삭제/메타 변경 시)
 async function saveToCloud() {
   if(!GOOGLE_WEB_APP_URL || GOOGLE_WEB_APP_URL.includes("여기에_복사한")) return;
-  setStatus("변경사항 클라우드 저장 중...");
+  setStatus("클라우드 저장 중...");
   try {
-    const payload = { logs: logs, sites: sites, writers: writers };
-    await fetch(GOOGLE_WEB_APP_URL, {
-      method: "POST",
-      body: JSON.stringify(payload),
-      headers: { "Content-Type": "text/plain" }
+    const payload = { action:"full", logs, sites, writers, items: inv.map(i=>i.name) };
+    const res = await fetch(GOOGLE_WEB_APP_URL, {
+      method:"POST", body:JSON.stringify(payload), headers:{"Content-Type":"text/plain"}
     });
-    setStatus("✓ 변경사항 클라우드 저장 완료", "success");
+    const result = await res.json().catch(()=>({}));
+    if(result.status==="success") setStatus("✓ 실시간 클라우드 연결 완료 (안전)", "success");
+    else { console.error("GAS 오류:", result); setStatus("저장 실패: GAS 오류", "error"); }
   } catch(e) {
-    console.error(e);
-    setStatus("저장 실패: 클라우드 연결이 일시적으로 끊겼습니다.", "error");
+    console.error(e); setStatus("저장 실패: 네트워크 오류", "error");
+  }
+}
+
+// 한 줄만 빠르게 추가 (입고/출고 등록 시)
+async function appendToCloud(log) {
+  if(!GOOGLE_WEB_APP_URL || GOOGLE_WEB_APP_URL.includes("여기에_복사한")) return;
+  setStatus("클라우드 저장 중...");
+  try {
+    const payload = { action:"append", log };
+    const res = await fetch(GOOGLE_WEB_APP_URL, {
+      method:"POST", body:JSON.stringify(payload), headers:{"Content-Type":"text/plain"}
+    });
+    const result = await res.json().catch(()=>({}));
+    if(result.status==="success") setStatus("✓ 실시간 클라우드 연결 완료 (안전)", "success");
+    else { console.error("append 오류:", result); await saveToCloud(); }
+  } catch(e) {
+    console.error(e); setStatus("저장 실패: 네트워크 오류", "error");
+  }
+}
+
+// 한 줄만 빠르게 삭제
+async function deleteFromCloud(logId) {
+  if(!GOOGLE_WEB_APP_URL || GOOGLE_WEB_APP_URL.includes("여기에_복사한")) return;
+  setStatus("클라우드 저장 중...");
+  try {
+    const payload = { action:"delete", logId };
+    const res = await fetch(GOOGLE_WEB_APP_URL, {
+      method:"POST", body:JSON.stringify(payload), headers:{"Content-Type":"text/plain"}
+    });
+    const result = await res.json().catch(()=>({}));
+    if(result.status==="success") setStatus("✓ 실시간 클라우드 연결 완료 (안전)", "success");
+    else { console.error("delete 오류:", result); await saveToCloud(); }
+  } catch(e) {
+    console.error(e); setStatus("저장 실패: 네트워크 오류", "error");
   }
 }
 
@@ -866,7 +900,7 @@ async function registerIO(){
   document.getElementById('io-date').value = new Date().toISOString().slice(0,10);
   setTimeout(()=>msg.textContent='',3000);
 
-  appendToCloud(newLog);
+  await appendToCloud(newLog);
 }
 
 let parsedRows = [];
@@ -996,12 +1030,13 @@ async function deleteLog(logId) {
   if (targetIndex === -1) return;
   if(!confirm(`선택한 한 건의 이력을 삭제하겠습니까?`)) return;
 
+  const deletedId = logs[targetIndex].id;
   logs.splice(targetIndex, 1);
   updateYearSelectOptions();
   renderInv();
   renderLog();
 
-  await saveToCloud();
+  await deleteFromCloud(deletedId);
 }
 
 
