@@ -374,6 +374,11 @@ tr:hover td{background:#E6F1FB;}
         <input type="text" id="io-date" placeholder="날짜 (예: 2026-05-20)" style="flex:1;">
       </div>
       <div class="input-row">
+        <select id="io-writer" style="flex:1;font-size:13px;padding:8px 10px;border:0.5px solid #ccc;border-radius:8px;outline:none;">
+          <option value="">등록자 선택</option>
+        </select>
+      </div>
+      <div class="input-row">
         <button class="btn-reg" id="btn-reg-io" onclick="registerIO()" style="width:100%;padding:12px;font-size:14px;"><i class="ti ti-check"></i> 등록</button>
       </div>
       <div class="input-row">
@@ -399,10 +404,21 @@ tr:hover td{background:#E6F1FB;}
 
           <!-- 현장 관리 -->
           <div style="font-size:11px;color:#555;font-weight:500;margin-bottom:6px;">현장 관리</div>
-          <div style="display:flex;gap:6px;">
+          <div style="display:flex;gap:6px;margin-bottom:12px;">
             <input type="text" id="new-site-input" placeholder="새 현장명 입력 (예: 유일산업)" style="flex:1;font-size:13px;padding:8px 10px;border:1px solid #B5D4F4;border-radius:8px;outline:none;background:#fff;">
             <button onclick="addSite()" style="background:#185FA5;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;font-weight:500;white-space:nowrap;"><i class="ti ti-plus"></i> 추가</button>
             <button onclick="delSite()" style="background:#FCEBEB;color:#A32D2D;border:1px solid #F7C1C1;border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer;white-space:nowrap;"><i class="ti ti-trash"></i> 삭제</button>
+          </div>
+
+          <!-- 구분선 -->
+          <div style="border-top:1px solid #B5D4F4;margin-bottom:12px;"></div>
+
+          <!-- 등록자 관리 -->
+          <div style="font-size:11px;color:#555;font-weight:500;margin-bottom:6px;">등록자 관리</div>
+          <div style="display:flex;gap:6px;">
+            <input type="text" id="new-writer-input" placeholder="새 등록자명 입력 (예: 이현승)" style="flex:1;font-size:13px;padding:8px 10px;border:1px solid #B5D4F4;border-radius:8px;outline:none;background:#fff;">
+            <button onclick="addWriter()" style="background:#185FA5;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;font-weight:500;white-space:nowrap;"><i class="ti ti-plus"></i> 추가</button>
+            <button onclick="delWriter()" style="background:#FCEBEB;color:#A32D2D;border:1px solid #F7C1C1;border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer;white-space:nowrap;"><i class="ti ti-trash"></i> 삭제</button>
           </div>
         </div>
 
@@ -527,6 +543,7 @@ const DEFAULT_SITES = [
 let inv = BASE.map(i=>({name:i.name, current:0})); 
 let logs = [];
 let sites = [...DEFAULT_SITES];
+let writers = [];
 
 function setStatus(text, type='process') {
   const bar = document.getElementById('cloud-bar');
@@ -588,10 +605,12 @@ async function loadFromCloud() {
       })()
     }));
     if(data.sites) sites = data.sites;
+    if(data.writers) writers = data.writers;
     
     updateYearSelectOptions();
     renderInv();
     populateSels();
+    renderWriterSel();
     renderLog();
     setStatus("✓ 실시간 클라우드 연결 완료 (안전)", "success");
   } catch(e) {
@@ -605,7 +624,7 @@ async function saveToCloud() {
   if(!GOOGLE_WEB_APP_URL || GOOGLE_WEB_APP_URL.includes("여기에_복사한")) return;
   setStatus("변경사항 클라우드 저장 중...");
   try {
-    const payload = { logs: logs, sites: sites };
+    const payload = { logs: logs, sites: sites, writers: writers };
     await fetch(GOOGLE_WEB_APP_URL, {
       method: "POST",
       body: JSON.stringify(payload),
@@ -765,6 +784,39 @@ async function delSite(){
   await saveToCloud();
 }
 
+function renderWriterSel(){
+  const sel = document.getElementById('io-writer');
+  if(!sel) return;
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">등록자 선택</option>';
+  writers.forEach(w => { sel.innerHTML += `<option value="${w}">${w}</option>`; });
+  if(prev) sel.value = prev;
+}
+
+async function addWriter(){
+  const input = document.getElementById('new-writer-input');
+  const name = input.value.trim();
+  if(!name){ alert('등록자명을 입력하세요.'); return; }
+  if(writers.includes(name)){ alert('이미 존재하는 등록자입니다.'); return; }
+  writers.push(name);
+  renderWriterSel();
+  input.value = '';
+  await saveToCloud();
+  alert(`"${name}" 등록자가 추가되었습니다.`);
+}
+
+async function delWriter(){
+  const input = document.getElementById('new-writer-input');
+  const name = input.value.trim();
+  if(!name){ alert('삭제할 등록자명을 입력하세요.'); return; }
+  if(!writers.includes(name)){ alert(`"${name}" 등록자가 존재하지 않습니다.`); return; }
+  if(!confirm(`"${name}" 등록자를 삭제할까요?`)) return;
+  writers = writers.filter(w => w !== name);
+  renderWriterSel();
+  input.value = '';
+  await saveToCloud();
+}
+
 function populateSels(){
   const s  = document.getElementById('io-item');
   const lf = document.getElementById('log-filter-item');
@@ -775,6 +827,7 @@ function populateSels(){
     lf.innerHTML += `<option value="${i.name}">${i.name}</option>`;
   });
   renderSiteSel();
+  renderWriterSel();
 }
 
 async function registerIO(){
@@ -795,7 +848,8 @@ async function registerIO(){
   const today = dateVal || new Date().toISOString().slice(0,10);
   
   const uniqueId = Date.now() + '-' + Math.floor(Math.random()*1000);
-  logs.unshift({id:uniqueId, date:today, type, item, site, hogi:hogs, qty, note});
+  const writer = document.getElementById('io-writer')?.value || '';
+  logs.unshift({id:uniqueId, date:today, type, item, site, hogi:hogs, qty, note, writer});
   
   updateYearSelectOptions();
   renderInv();
@@ -927,6 +981,7 @@ function renderLog(){
       <span class="log-site">${l.site||'-'}${(l.hogi!==undefined&&l.hogi!==null&&l.hogi!=='')?' '+l.hogi+'호기':''}</span>
       <span class="log-item">${l.item}</span>
       <span class="log-qty">${l.qty}개</span>
+      ${l.writer?`<span class="log-note" style="color:#185FA5;font-weight:500">${l.writer}</span>`:''}
       ${l.note?`<span class="log-note">${l.note}</span>`:''}
       <button class="btn-log-del" onclick="deleteLog('${l.id}')">삭제</button>
     </div>
