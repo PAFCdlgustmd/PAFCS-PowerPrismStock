@@ -961,18 +961,66 @@ function drawMonthlyTrend(outLogs, item, site, year, filterDesc){
   const validLogs = outLogs.filter(l=>l.date&&/^\d{4}-\d{2}/.test(l.date));
   const months = [...new Set(validLogs.map(l=>l.date.slice(0,7)))].sort();
 
-  // 그룹: 품목이 지정되면 현장별, 아니면 품목별 (최대 6개)
-  let groups = item
-    ? [...new Set(outLogs.map(l=>l.site&&l.site.trim()?l.site.trim():'(현장없음)'))]
-    : [...new Set(outLogs.map(l=>l.item))];
+  // ── 그룹 결정 로직 ──
+  // 현장+품목 둘 다 선택 → 현장의 호기별 분리 (예: 유일산업 1호기, 유일산업 2호기)
+  // 현장만 선택           → 품목별 분리
+  // 품목만 선택           → 현장+호기 조합별 분리
+  // 아무것도 미선택       → 품목별 분리
+  let groupMode; // 'hogi' | 'item' | 'site_hogi'
+  let groups;
+
+  if(site && item){
+    // 현장+품목 선택: 해당 현장의 호기별
+    groupMode = 'hogi';
+    const hogis = [...new Set(outLogs
+      .filter(l=>l.hogi!==undefined&&l.hogi!==null&&l.hogi!=='')
+      .map(l=>String(l.hogi)))].sort((a,b)=>Number(a)-Number(b));
+    groups = hogis.length > 0 ? hogis : ['전체'];
+  } else if(site && !item){
+    // 현장만 선택: 품목별
+    groupMode = 'item';
+    groups = [...new Set(outLogs.map(l=>l.item))];
+  } else if(!site && item){
+    // 품목만 선택: 현장+호기 조합별
+    groupMode = 'site_hogi';
+    groups = [...new Set(outLogs.map(l=>{
+      const s = l.site&&l.site.trim()?l.site.trim():'(현장없음)';
+      const h = (l.hogi!==undefined&&l.hogi!==null&&l.hogi!=='') ? ' '+String(l.hogi)+'호기' : '';
+      return s+h;
+    }))].sort();
+  } else {
+    // 아무것도 미선택: 품목별
+    groupMode = 'item';
+    groups = [...new Set(outLogs.map(l=>l.item))];
+  }
+
+  const allGroups = [...groups];
   // 차트는 상위 10개로 제한, 테이블은 전체 표시
-  const allGroups = groups;
   if(groups.length > 10) groups = groups.slice(0,10);
 
+  // 그룹별 로그 필터 함수
+  function filterByGroup(logs, g){
+    if(groupMode==='hogi'){
+      if(g==='전체') return logs;
+      return logs.filter(l=>String(l.hogi)===g);
+    } else if(groupMode==='item'){
+      return logs.filter(l=>l.item===g);
+    } else { // site_hogi
+      return logs.filter(l=>{
+        const s = l.site&&l.site.trim()?l.site.trim():'(현장없음)';
+        const h = (l.hogi!==undefined&&l.hogi!==null&&l.hogi!=='') ? ' '+String(l.hogi)+'호기' : '';
+        return (s+h)===g;
+      });
+    }
+  }
+
+  // 테이블 첫 번째 열 헤더
+  const firstColLabel = groupMode==='hogi' ? '호기' : groupMode==='item' ? '품목' : '현장 / 호기';
+
   const datasets = groups.map((g,i) => {
-    const filtered = outLogs.filter(l => item ? (l.site&&l.site.trim()?l.site.trim():'(현장없음)')===g : l.item===g);
+    const filtered = filterByGroup(outLogs, g);
     return {
-      label: g,
+      label: groupMode==='hogi' && g!=='전체' ? g+'호기' : g,
       data: months.map(m => filtered.filter(l=>l.date&&l.date.slice(0,7)===m).reduce((a,l)=>a+l.qty,0)),
       borderColor: CHART_COLORS[i%CHART_COLORS.length],
       backgroundColor: CHART_COLORS[i%CHART_COLORS.length]+'33',
@@ -998,16 +1046,16 @@ function drawMonthlyTrend(outLogs, item, site, year, filterDesc){
   ]);
 
   // 테이블
-  // 연도 그룹 계산
   const yearGroups = [];
   months.forEach(m=>{ const y=m.slice(0,4); const last=yearGroups[yearGroups.length-1]; if(last&&last.year===y){last.count++;}else{yearGroups.push({year:y,count:1});} });
-  const yearRow = `<tr><th class="yr-header">${item?'현장':'품목'}</th>${yearGroups.map(g=>`<th class="yr-header" colspan="${g.count}">${g.year}년</th>`).join('')}<th class="yr-header">합계</th></tr>`;
+  const yearRow = `<tr><th class="yr-header">${firstColLabel}</th>${yearGroups.map(g=>`<th class="yr-header" colspan="${g.count}">${g.year}년</th>`).join('')}<th class="yr-header">합계</th></tr>`;
   const monthRow = `<tr><th></th>${months.map(m=>`<th>${parseInt(m.slice(5))}월</th>`).join('')}<th>합계</th></tr>`;
   const tHead = yearRow + monthRow;
   const tBody = allGroups.map(g => {
-    const filtered = outLogs.filter(l => item ? (l.site&&l.site.trim()?l.site.trim():'(현장없음)')===g : l.item===g);
+    const filtered = filterByGroup(outLogs, g);
     const cells = months.map(m => filtered.filter(l=>l.date&&l.date.slice(0,7)===m).reduce((a,l)=>a+l.qty,0));
-    return `<tr><td style="font-weight:500">${g}</td>${cells.map(v=>`<td>${v||'-'}</td>`).join('')}<td style="font-weight:500;color:#185FA5">${cells.reduce((a,v)=>a+v,0)}</td></tr>`;
+    const label = groupMode==='hogi' && g!=='전체' ? g+'호기' : g;
+    return `<tr><td style="font-weight:500">${label}</td>${cells.map(v=>`<td>${v||'-'}</td>`).join('')}<td style="font-weight:500;color:#185FA5">${cells.reduce((a,v)=>a+v,0)}</td></tr>`;
   });
   const totals = months.map(m=>validLogs.filter(l=>l.date.slice(0,7)===m).reduce((a,l)=>a+l.qty,0));
   tBody.push(`<tr style="background:#E6F1FB;font-weight:500"><td>합계</td>${totals.map(v=>`<td>${v||'-'}</td>`).join('')}<td style="color:#185FA5">${totals.reduce((a,v)=>a+v,0)}</td></tr>`);
