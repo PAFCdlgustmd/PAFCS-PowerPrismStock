@@ -470,25 +470,23 @@ async function loadFromCloud() {
     if(data.logs) logs = data.logs.map(l => ({
       ...l,
       qty: Number(l.qty) || 0,
-      hogi: l.hogi !== undefined && l.hogi !== null && l.hogi !== '' ? String(l.hogi) : '',
+      hogi: (l.hogi !== undefined && l.hogi !== null && l.hogi !== '') ? String(l.hogi) : '',
       date: (()=>{
         const s = String(l.date || '').trim();
-        // 이미 YYYY-MM-DD 형식이면 그대로
         if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-        // YYYY/MM/DD 형식 처리
         if(/^\d{4}\/\d{2}\/\d{2}$/.test(s)) return s.replace(/\//g,'-');
-        // 엑셀 시리얼 넘버(숫자)인 경우 변환
+        if(/^\d{4}\/\d{1,2}\/\d{1,2}$/.test(s)){
+          const [y,mo,d]=s.split('/');
+          return `${y}-${mo.padStart(2,'0')}-${d.padStart(2,'0')}`;
+        }
         const n = Number(s);
-        if(!isNaN(n) && n > 40000) {
-          const d = new Date(Math.round((n - 25569) * 86400 * 1000));
-          const y = d.getUTCFullYear();
-          const mo = String(d.getUTCMonth()+1).padStart(2,'0');
-          const dy = String(d.getUTCDate()).padStart(2,'0');
-          return `${y}-${mo}-${dy}`;
+        if(!isNaN(n) && n > 40000){
+          const dt = new Date(Math.round((n-25569)*86400*1000));
+          return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth()+1).padStart(2,'0')}-${String(dt.getUTCDate()).padStart(2,'0')}`;
         }
         return s;
       })()
-    }));
+    })).filter(l => /^\d{4}-\d{2}-\d{2}$/.test(l.date));
     if(data.sites) sites = data.sites;
     
     updateYearSelectOptions();
@@ -558,10 +556,7 @@ function updateYearSelectOptions(){
   let yearsSet = new Set([thisYear, "2024", "2025", "2026", "2027"]);
   
   logs.forEach(l => {
-    if(l.date && /^\d{4}/.test(l.date)) {
-      const yr = l.date.slice(0, 4);
-      if(/^\d{4}$/.test(yr)) yearsSet.add(yr);
-    }
+    if(l.date && /^\d{4}-\d{2}-\d{2}$/.test(l.date)) yearsSet.add(l.date.slice(0,4));
   });
   
   const sortedYears = Array.from(yearsSet).sort((a,b) => b - a);
@@ -829,7 +824,7 @@ function renderLog(){
     <div class="log-row">
       <span class="log-date">${formatDate(l.date)}</span>
       <span class="badge ${l.type==='in'?'b-in':'b-out'}">${l.type==='in'?'입고':'출고'}</span>
-      <span class="log-site">${l.site||'-'}${(l.hogi !== undefined && l.hogi !== null && l.hogi !== '') ? ' '+l.hogi+'호기' : ''}</span>
+      <span class="log-site">${l.site||'-'}${(l.hogi!==undefined&&l.hogi!==null&&l.hogi!=='')?' '+l.hogi+'호기':''}</span>
       <span class="log-item">${l.item}</span>
       <span class="log-qty">${l.qty}개</span>
       <span class="log-note">${l.note||''}</span>
@@ -873,7 +868,7 @@ function populateAnalysisSels(){
   anSite.innerHTML = '<option value="">전체 현장</option>';
   sites.forEach(s => anSite.innerHTML += `<option value="${s}">${s}</option>`);
 
-  const hogis = [...new Set(logs.filter(l=>l.hogi !== undefined && l.hogi !== null && l.hogi !== '').map(l=>String(l.hogi)))].sort((a,b)=>Number(a)-Number(b));
+  const hogis = [...new Set(logs.filter(l=>l.hogi!==undefined&&l.hogi!==null&&l.hogi!=='').map(l=>String(l.hogi)))].sort((a,b)=>Number(a)-Number(b));
   anHogi.innerHTML = '<option value="">전체 호기</option>';
   hogis.forEach(h => anHogi.innerHTML += `<option value="${h}">${h}호기</option>`);
 
@@ -881,8 +876,8 @@ function populateAnalysisSels(){
   inv.forEach(i => anItem.innerHTML += `<option value="${i.name}">${i.name}</option>`);
 
   const baseYears = new Set(['2024','2025','2026','2027']);
-  logs.filter(l=>l.date && /^\d{4}/.test(l.date)).forEach(l => baseYears.add(l.date.slice(0,4)));
-  const years = Array.from(baseYears).filter(y => /^\d{4}$/.test(y)).sort((a,b)=>b-a);
+  logs.forEach(l=>{ if(l.date && /^\d{4}$/.test(l.date.slice(0,4))) baseYears.add(l.date.slice(0,4)); });
+  const years = Array.from(baseYears).filter(y=>/^\d{4}$/.test(y)).sort((a,b)=>b-a);
   anYear.innerHTML = '<option value="">전체 연도</option>';
   years.forEach(y => anYear.innerHTML += `<option value="${y}">${y}년</option>`);
 
@@ -919,7 +914,7 @@ function renderAnalysis(){
   const outLogs = logs.filter(l =>
     l.type === 'out' &&
     (!site || l.site === site) &&
-    (!hogi || l.hogi === hogi) &&
+    (!hogi || String(l.hogi) === hogi) &&
     (!item || l.item === item) &&
     (!year || (l.date && l.date.startsWith(year)))
   );
@@ -945,7 +940,7 @@ function renderAnalysis(){
 // ── 월별 출고 추이 ──
 function drawMonthlyTrend(outLogs, item, site, year, filterDesc){
   document.getElementById('an-chart-title').textContent = `월별 출고 추이 — ${filterDesc}`;
-  const months = [...new Set(outLogs.map(l=>l.date.slice(0,7)))].sort();
+  const months = [...new Set(outLogs.filter(l=>/^\d{4}-\d{2}-\d{2}$/.test(l.date)).map(l=>l.date.slice(0,7)))].sort();
 
   // 그룹: 품목이 지정되면 현장별, 아니면 품목별 (최대 6개)
   let groups = item
@@ -966,7 +961,7 @@ function drawMonthlyTrend(outLogs, item, site, year, filterDesc){
 
   const ctx = document.getElementById('an-chart').getContext('2d');
   anChart = new Chart(ctx, {
-    type:'line', data:{ labels: months.map(m=>{ const [y,mo]=m.split('-'); return y+'년 '+parseInt(mo)+'월'; }), datasets },
+    type:'line', data:{ labels: months.map(m=>{ const p=m.split('-'); return p[0]+'년 '+parseInt(p[1])+'월'; }), datasets },
     options:{ responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{ position:'bottom', labels:{boxWidth:12,font:{size:11}} } },
       scales:{ y:{ beginAtZero:true } } }
@@ -977,7 +972,7 @@ function drawMonthlyTrend(outLogs, item, site, year, filterDesc){
   const maxM  = months.reduce((a,m)=>{ const s=outLogs.filter(l=>l.date.slice(0,7)===m).reduce((x,l)=>x+l.qty,0); return s>a.v?{m,v:s}:a; },{m:'-',v:0});
   renderSummaryCards([
     {label:'총 출고량', value:total+'개', color:'#185FA5'},
-    {label:'최다 출고월', value:(()=>{ const parts=maxM.m.split('-'); return parts.length===2 ? parts[0]+'년 '+parseInt(parts[1])+'월' : maxM.m; })(), color:'#1D9E75'},
+    {label:'최다 출고월', value:(()=>{ const p=maxM.m.split('-'); return p.length===2?p[0]+'년 '+parseInt(p[1])+'월':maxM.m; })(), color:'#1D9E75'},
     {label:'월 평균', value:Math.round(total/months.length)+'개', color:'#BA7517'},
   ]);
 
@@ -996,7 +991,7 @@ function drawMonthlyTrend(outLogs, item, site, year, filterDesc){
 // ── 연별 출고 비교 ──
 function drawYearlyCompare(outLogs, item, site, filterDesc){
   document.getElementById('an-chart-title').textContent = `연별 출고 비교 — ${filterDesc}`;
-  const years = [...new Set(outLogs.map(l=>l.date.slice(0,4)))].sort();
+  const years = [...new Set(outLogs.filter(l=>/^\d{4}-\d{2}-\d{2}$/.test(l.date)).map(l=>l.date.slice(0,4)))].sort();
   const months12 = ['01','02','03','04','05','06','07','08','09','10','11','12'];
 
   const datasets = years.map((y,i) => ({
@@ -1009,7 +1004,7 @@ function drawYearlyCompare(outLogs, item, site, filterDesc){
 
   const ctx = document.getElementById('an-chart').getContext('2d');
   anChart = new Chart(ctx, {
-    type:'line', data:{ labels:months12.map(m=>m+'월'), datasets },
+    type:'line', data:{ labels:months12.map(m=>parseInt(m)+'월'), datasets },
     options:{ responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{ position:'bottom', labels:{boxWidth:12,font:{size:11}} } },
       scales:{ y:{ beginAtZero:true } } }
@@ -1024,7 +1019,7 @@ function drawYearlyCompare(outLogs, item, site, filterDesc){
   ]);
 
   // 테이블
-  const tHead = `<tr><th>연도</th>${months12.map(m=>`<th>${m}월</th>`).join('')}<th>합계</th></tr>`;
+  const tHead = `<tr><th>연도</th>${months12.map(m=>`<th>${parseInt(m)}월</th>`).join('')}<th>합계</th></tr>`;
   const tBody = years.map(y => {
     const cells = months12.map(m => outLogs.filter(l=>l.date.startsWith(y+'-'+m)).reduce((a,l)=>a+l.qty,0));
     return `<tr><td style="font-weight:500">${y}년</td>${cells.map(v=>`<td>${v||'-'}</td>`).join('')}<td style="font-weight:500;color:#185FA5">${cells.reduce((a,v)=>a+v,0)}</td></tr>`;
