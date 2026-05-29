@@ -474,6 +474,7 @@ async function loadFromCloud() {
     if(data.logs) logs = data.logs.map(l => ({
       ...l,
       qty: Number(l.qty) || 0,
+      site: (l.site !== undefined && l.site !== null) ? String(l.site).trim() : '',
       hogi: (l.hogi !== undefined && l.hogi !== null && l.hogi !== '') ? String(l.hogi) : '',
       date: (()=>{
         const raw = l.date;
@@ -962,12 +963,14 @@ function drawMonthlyTrend(outLogs, item, site, year, filterDesc){
 
   // 그룹: 품목이 지정되면 현장별, 아니면 품목별 (최대 6개)
   let groups = item
-    ? [...new Set(outLogs.map(l=>l.site||'-'))]
+    ? [...new Set(outLogs.map(l=>l.site&&l.site.trim()?l.site.trim():'(현장없음)'))]
     : [...new Set(outLogs.map(l=>l.item))];
-  if(groups.length > 6) groups = groups.slice(0,6);
+  // 차트는 상위 10개로 제한, 테이블은 전체 표시
+  const allGroups = groups;
+  if(groups.length > 10) groups = groups.slice(0,10);
 
   const datasets = groups.map((g,i) => {
-    const filtered = outLogs.filter(l => item ? (l.site||'-')===g : l.item===g);
+    const filtered = outLogs.filter(l => item ? (l.site&&l.site.trim()?l.site.trim():'(현장없음)')===g : l.item===g);
     return {
       label: g,
       data: months.map(m => filtered.filter(l=>l.date&&l.date.slice(0,7)===m).reduce((a,l)=>a+l.qty,0)),
@@ -1001,8 +1004,8 @@ function drawMonthlyTrend(outLogs, item, site, year, filterDesc){
   const yearRow = `<tr><th class="yr-header">${item?'현장':'품목'}</th>${yearGroups.map(g=>`<th class="yr-header" colspan="${g.count}">${g.year}년</th>`).join('')}<th class="yr-header">합계</th></tr>`;
   const monthRow = `<tr><th></th>${months.map(m=>`<th>${parseInt(m.slice(5))}월</th>`).join('')}<th>합계</th></tr>`;
   const tHead = yearRow + monthRow;
-  const tBody = groups.map(g => {
-    const filtered = outLogs.filter(l => item ? (l.site||'-')===g : l.item===g);
+  const tBody = allGroups.map(g => {
+    const filtered = outLogs.filter(l => item ? (l.site&&l.site.trim()?l.site.trim():'(현장없음)')===g : l.item===g);
     const cells = months.map(m => filtered.filter(l=>l.date&&l.date.slice(0,7)===m).reduce((a,l)=>a+l.qty,0));
     return `<tr><td style="font-weight:500">${g}</td>${cells.map(v=>`<td>${v||'-'}</td>`).join('')}<td style="font-weight:500;color:#185FA5">${cells.reduce((a,v)=>a+v,0)}</td></tr>`;
   });
