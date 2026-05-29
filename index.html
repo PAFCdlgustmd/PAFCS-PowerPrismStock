@@ -288,11 +288,6 @@ tr:hover td{background:#E6F1FB;}
         <input type="text" id="io-date" placeholder="날짜 (예: 2026-05-20)" style="flex:1;">
       </div>
       <div class="input-row">
-        <select id="io-writer" style="flex:1;font-size:13px;padding:8px 10px;border:0.5px solid #ccc;border-radius:8px;outline:none;">
-          <option value="">작성자 선택</option>
-        </select>
-      </div>
-      <div class="input-row">
         <button class="btn-reg" id="btn-reg-io" onclick="registerIO()" style="width:100%;padding:12px;font-size:14px;"><i class="ti ti-check"></i> 등록</button>
       </div>
       <div class="input-row">
@@ -374,20 +369,44 @@ tr:hover td{background:#E6F1FB;}
   </div>
 
   <div id="tab-analysis" class="hidden">
-    <div class="an-filter">
-      <select id="an-site" onchange="renderAnalysis()"><option value="">전체 현장</option></select>
-      <select id="an-hogi" onchange="renderAnalysis()"><option value="">전체 호기</option></select>
-      <select id="an-item" onchange="renderAnalysis()"><option value="">전체 품목</option></select>
-      <select id="an-view" onchange="renderAnalysis()">
-        <option value="site">현장별 출고량</option>
-        <option value="item">품목별 출고량</option>
-        <option value="trend">월별 추이</option>
-      </select>
+
+    <!-- 필터 영역 -->
+    <div style="background:#E6F1FB;border-radius:10px;padding:12px 14px;margin-bottom:12px;">
+      <div style="font-size:11px;font-weight:500;color:#185FA5;margin-bottom:8px;">🔍 분석 조건 설정</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+        <select id="an-site" onchange="renderAnalysis()" style="font-size:13px;padding:8px 10px;border:1px solid #B5D4F4;border-radius:8px;outline:none;background:#fff;">
+          <option value="">전체 현장</option>
+        </select>
+        <select id="an-hogi" onchange="renderAnalysis()" style="font-size:13px;padding:8px 10px;border:1px solid #B5D4F4;border-radius:8px;outline:none;background:#fff;">
+          <option value="">전체 호기</option>
+        </select>
+        <select id="an-item" onchange="renderAnalysis()" style="font-size:13px;padding:8px 10px;border:1px solid #B5D4F4;border-radius:8px;outline:none;background:#fff;">
+          <option value="">전체 품목</option>
+        </select>
+        <select id="an-year" onchange="renderAnalysis()" style="font-size:13px;padding:8px 10px;border:1px solid #B5D4F4;border-radius:8px;outline:none;background:#fff;">
+          <option value="">전체 연도</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button onclick="setAnView('monthly')"  id="an-btn-monthly"  style="flex:1;padding:7px;font-size:12px;border-radius:7px;border:1px solid #185FA5;background:#185FA5;color:#fff;cursor:pointer;font-weight:500;">월별 출고 추이</button>
+        <button onclick="setAnView('yearly')"   id="an-btn-yearly"   style="flex:1;padding:7px;font-size:12px;border-radius:7px;border:1px solid #B5D4F4;background:#fff;color:#185FA5;cursor:pointer;">연별 출고 비교</button>
+        <button onclick="setAnView('site')"     id="an-btn-site"     style="flex:1;padding:7px;font-size:12px;border-radius:7px;border:1px solid #B5D4F4;background:#fff;color:#185FA5;cursor:pointer;">현장별 출고량</button>
+        <button onclick="setAnView('item')"     id="an-btn-item"     style="flex:1;padding:7px;font-size:12px;border-radius:7px;border:1px solid #B5D4F4;background:#fff;color:#185FA5;cursor:pointer;">품목별 출고량</button>
+      </div>
     </div>
+
+    <!-- 차트 -->
     <div class="chart-wrap">
-      <div class="chart-title" id="an-chart-title">출고량 분석</div>
-      <canvas id="an-chart" style="width:100%;height:240px;"></canvas>
+      <div class="chart-title" id="an-chart-title" style="font-size:13px;font-weight:500;color:#185FA5;margin-bottom:10px;"></div>
+      <div style="position:relative;height:260px;">
+        <canvas id="an-chart"></canvas>
+      </div>
     </div>
+
+    <!-- 요약 카드 -->
+    <div id="an-summary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;"></div>
+
+    <!-- 상세 테이블 -->
     <div class="an-table-wrap">
       <table class="an-table" id="an-table"></table>
     </div>
@@ -396,7 +415,7 @@ tr:hover td{background:#E6F1FB;}
 
 <script>
 // ★★★ [중요] 2단계에서 배포한 구글 웹 앱 URL 주소를 여기에 넣어주세요 ★★★
-const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzxDJ3R5UNPIBYRrGy-dudZQOP60h0Hb-cjzbDVb_WAj9i5Ae_nAkevNPLcPUGQoZ8q/exec";
+const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwgIfYe2fLpaXZOhh2B_1R32cm3LFHzEyMYq7H4yrD9wngmPXHQuVUn25DUkIxE3Zh_/exec";
 
 const BASE = [
   {name:"레진(후지전기)",        initial:0},
@@ -419,14 +438,9 @@ const DEFAULT_SITES = [
   "중구수영장", "후지전기"
 ];
 
-const DEFAULT_WRITERS = [
-  "김영수", "이철민", "박준호", "최성훈", "정태원"
-];
-
 let inv = BASE.map(i=>({name:i.name, current:0})); 
 let logs = [];
 let sites = [...DEFAULT_SITES];
-let writers = [...DEFAULT_WRITERS];
 
 function setStatus(text, type='process') {
   const bar = document.getElementById('cloud-bar');
@@ -455,7 +469,6 @@ async function loadFromCloud() {
     const data = await res.json();
     if(data.logs) logs = data.logs.map(l => ({ ...l, qty: Number(l.qty) || 0 }));
     if(data.sites) sites = data.sites;
-    if(data.writers && data.writers.length > 0) writers = data.writers;
     
     updateYearSelectOptions();
     renderInv();
@@ -473,7 +486,7 @@ async function saveToCloud() {
   if(!GOOGLE_WEB_APP_URL || GOOGLE_WEB_APP_URL.includes("여기에_복사한")) return;
   setStatus("변경사항 클라우드 저장 중...");
   try {
-    const payload = { logs: logs, sites: sites, writers: writers };
+    const payload = { logs: logs, sites: sites };
     await fetch(GOOGLE_WEB_APP_URL, {
       method: "POST",
       body: JSON.stringify(payload),
@@ -643,47 +656,38 @@ function populateSels(){
     lf.innerHTML += `<option value="${i.name}">${i.name}</option>`;
   });
   renderSiteSel();
-  // 작성자 드롭다운 채우기
-  const ws = document.getElementById('io-writer');
-  const prevW = ws.value;
-  ws.innerHTML = '<option value="">작성자 선택</option>';
-  writers.forEach(w => { ws.innerHTML += `<option value="${w}">${w}</option>`; });
-  if(prevW) ws.value = prevW;
 }
 
 async function registerIO(){
-  const type   = document.getElementById('io-type').value;
-  const item   = document.getElementById('io-item').value;
-  const site   = document.getElementById('io-site-sel').value;
-  const qty    = parseInt(document.getElementById('io-qty').value);
-  const note   = document.getElementById('io-note').value.trim();
-  const hogs   = document.getElementById('io-hogi').value.trim();
-  const dateVal= document.getElementById('io-date').value;
-  const writer = document.getElementById('io-writer').value;
-  const msg    = document.getElementById('io-msg');
-  if(!item)  { msg.className='msg-err'; msg.textContent='품목을 선택하세요.'; return; }
-  if(!site)  { msg.className='msg-err'; msg.textContent='현장을 선택하세요.'; return; }
+  const type = document.getElementById('io-type').value;
+  const item = document.getElementById('io-item').value;
+  const site = document.getElementById('io-site-sel').value;
+  const qty  = parseInt(document.getElementById('io-qty').value);
+  const note = document.getElementById('io-note').value.trim();
+  const hogs = document.getElementById('io-hogi').value.trim();
+  const dateVal = document.getElementById('io-date').value;
+  const msg  = document.getElementById('io-msg');
+  if(!item){ msg.className='msg-err'; msg.textContent='품목을 선택하세요.'; return; }
+  if(!site){ msg.className='msg-err'; msg.textContent='현장을 선택하세요.'; return; }
   if(!qty||qty<1){ msg.className='msg-err'; msg.textContent='수량을 입력하세요.'; return; }
-  if(!writer){ msg.className='msg-err'; msg.textContent='작성자를 선택하세요.'; return; }
-
+  
   const it = inv.find(i=>i.name===item);
   if(type==='out' && it.current < qty){ msg.className='msg-err'; msg.textContent=`재고 부족 (현재: ${it.current}개)`; return; }
   const today = dateVal || new Date().toISOString().slice(0,10);
-
+  
   const uniqueId = Date.now() + '-' + Math.floor(Math.random()*1000);
-  logs.unshift({id:uniqueId, date:today, type, item, site, hogi:hogs, qty, note, writer});
-
+  logs.unshift({id:uniqueId, date:today, type, item, site, hogi:hogs, qty, note});
+  
   updateYearSelectOptions();
   renderInv();
   renderLog();
-
+  
   msg.className='msg-ok';
-  msg.textContent=`✓ ${item} ${type==='in'?'입고':'출고'} ${qty}개 등록 완료 (${writer})`;
+  msg.textContent=`✓ ${item} ${type==='in'?'입고':'출고'} ${qty}개 등록 완료`;
   document.getElementById('io-qty').value='';
   document.getElementById('io-note').value='';
   document.getElementById('io-hogi').value='';
   document.getElementById('io-date').value = new Date().toISOString().slice(0,10);
-  document.getElementById('io-writer').value='';
   setTimeout(()=>msg.textContent='',3000);
 
   await saveToCloud();
@@ -804,7 +808,6 @@ function renderLog(){
       <span class="log-site">${l.site||'-'}${l.hogi?' '+l.hogi+'호기':''}</span>
       <span class="log-item">${l.item}</span>
       <span class="log-qty">${l.qty}개</span>
-      <span style="min-width:52px;font-size:11px;color:#185FA5;font-weight:500;">${l.writer||''}</span>
       <span class="log-note">${l.note||''}</span>
       <button class="btn-log-del" onclick="deleteLog('${l.id}')">삭제</button>
     </div>
@@ -841,91 +844,225 @@ function populateAnalysisSels(){
   const anSite = document.getElementById('an-site');
   const anHogi = document.getElementById('an-hogi');
   const anItem = document.getElementById('an-item');
+  const anYear = document.getElementById('an-year');
+  const prevSite = anSite.value, prevHogi = anHogi.value, prevItem = anItem.value, prevYear = anYear.value;
+
   anSite.innerHTML = '<option value="">전체 현장</option>';
-  sites.forEach(s=> anSite.innerHTML += `<option value="${s}">${s}</option>`);
+  sites.forEach(s => anSite.innerHTML += `<option value="${s}">${s}</option>`);
+
   const hogis = [...new Set(logs.filter(l=>l.hogi).map(l=>l.hogi))].sort((a,b)=>Number(a)-Number(b));
   anHogi.innerHTML = '<option value="">전체 호기</option>';
-  hogis.forEach(h=> anHogi.innerHTML += `<option value="${h}">${h}호기</option>`);
+  hogis.forEach(h => anHogi.innerHTML += `<option value="${h}">${h}호기</option>`);
+
   anItem.innerHTML = '<option value="">전체 품목</option>';
-  inv.forEach(i=> anItem.innerHTML += `<option value="${i.name}">${i.name}</option>`);
+  inv.forEach(i => anItem.innerHTML += `<option value="${i.name}">${i.name}</option>`);
+
+  const years = [...new Set(logs.filter(l=>l.date).map(l=>l.date.slice(0,4)))].sort((a,b)=>b-a);
+  anYear.innerHTML = '<option value="">전체 연도</option>';
+  years.forEach(y => anYear.innerHTML += `<option value="${y}">${y}년</option>`);
+
+  if(prevSite) anSite.value = prevSite;
+  if(prevHogi) anHogi.value = prevHogi;
+  if(prevItem) anItem.value = prevItem;
+  if(prevYear) anYear.value = prevYear;
 }
 
+let anChart = null;
+let currentAnView = 'monthly';
 const CHART_COLORS = ['#185FA5','#1D9E75','#D85A30','#BA7517','#993556','#534AB7','#639922','#A32D2D','#0F6E56','#854F0B'];
 
+function setAnView(view){
+  currentAnView = view;
+  ['monthly','yearly','site','item'].forEach(v => {
+    const btn = document.getElementById('an-btn-'+v);
+    if(btn){
+      btn.style.background = v===view ? '#185FA5' : '#fff';
+      btn.style.color      = v===view ? '#fff'    : '#185FA5';
+      btn.style.border     = v===view ? '1px solid #185FA5' : '1px solid #B5D4F4';
+    }
+  });
+  renderAnalysis();
+}
+
 function renderAnalysis(){
-  const scrX = window.scrollX; const scrY = window.scrollY;
   const site = document.getElementById('an-site').value;
-  const hubo = document.getElementById('an-hogi').value;
+  const hogi = document.getElementById('an-hogi').value;
   const item = document.getElementById('an-item').value;
-  const view = document.getElementById('an-view').value;
+  const year = document.getElementById('an-year').value;
 
-  const outLogs = logs.filter(l => l.type === 'out' && (!site || l.site === site) && (!hubo || l.hogi === hubo) && (!item || l.item === item) );
-  if(anChart){ anChart.destroy(); anChart=null; }
+  // 출고 이력만 필터
+  const outLogs = logs.filter(l =>
+    l.type === 'out' &&
+    (!site || l.site === site) &&
+    (!hogi || l.hogi === hogi) &&
+    (!item || l.item === item) &&
+    (!year || (l.date && l.date.startsWith(year)))
+  );
 
-  if(view === 'site'){
-    document.getElementById('an-chart-title').textContent = `현장별 출고량`;
-    const map = {}; outLogs.forEach(l=>{ map[l.site]=(map[l.site]||0)+l.qty; });
-    const labels = Object.keys(map).sort((a,b)=>map[b]-map[a]);
-    drawBarChart(labels, labels.map(k=>map[k]), '출고량');
-    drawSiteTable(map, labels);
-  } else if(view === 'item'){
-    document.getElementById('an-chart-title').textContent = `품목별 출고량`;
-    const map = {}; outLogs.forEach(l=>{ map[l.item]=(map[l.item]||0)+l.qty; });
-    const labels = Object.keys(map).sort((a,b)=>map[b]-map[a]);
-    drawBarChart(labels, labels.map(k=>map[k]), '출고량');
-    drawItemTable(map, labels);
-  } else {
-    document.getElementById('an-chart-title').textContent = `월별 출고 추이`;
-    drawTrendChart(outLogs, item, site);
+  if(anChart){ anChart.destroy(); anChart = null; }
+  document.getElementById('an-table').innerHTML = '';
+  document.getElementById('an-summary').innerHTML = '';
+
+  const filterDesc = [site||'전체 현장', hogi?hogi+'호기':'전체 호기', item||'전체 품목', year?year+'년':'전체 연도'].join(' / ');
+
+  if(!outLogs.length){
+    document.getElementById('an-chart-title').textContent = '해당 조건의 출고 이력이 없습니다.';
+    document.getElementById('an-table').innerHTML = `<tr><td colspan="10" style="padding:2rem;text-align:center;color:#888;">출고 이력이 없습니다.</td></tr>`;
+    return;
   }
-  setTimeout(function() { window.scrollTo(scrX, scrY); }, 0);
+
+  if(currentAnView === 'monthly')  drawMonthlyTrend(outLogs, item, site, year, filterDesc);
+  else if(currentAnView === 'yearly') drawYearlyCompare(outLogs, item, site, filterDesc);
+  else if(currentAnView === 'site')   drawSiteBar(outLogs, filterDesc);
+  else if(currentAnView === 'item')   drawItemBar(outLogs, filterDesc);
 }
 
-function drawBarChart(labels, data, labelName){
-  const ctx = document.getElementById('an-chart').getContext('2d');
-  anChart = new Chart(ctx, {
-    type:'bar', data:{ labels, datasets:[{ label:labelName, data, backgroundColor:'#185FA5', borderRadius:4 }] },
-    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} }, scales:{ y:{ beginAtZero:true, ticks:{stepSize:1} } } }
-  });
-}
-
-function drawTrendChart(outLogs, item, site){
-  const ctx = document.getElementById('an-chart').getContext('2d');
+// ── 월별 출고 추이 ──
+function drawMonthlyTrend(outLogs, item, site, year, filterDesc){
+  document.getElementById('an-chart-title').textContent = `월별 출고 추이 — ${filterDesc}`;
   const months = [...new Set(outLogs.map(l=>l.date.slice(0,7)))].sort();
-  if(!months.length){ document.getElementById('an-table').innerHTML='<tr><td>출고 이력이 없습니다.</td></tr>'; return; }
 
-  let groups = item ? ['전체'] : [...new Set(outLogs.map(l=>l.item))];
-  if(!item && groups.length > 5) groups = groups.slice(0,5);
+  // 그룹: 품목이 지정되면 현장별, 아니면 품목별 (최대 6개)
+  let groups = item
+    ? [...new Set(outLogs.map(l=>l.site||'-'))]
+    : [...new Set(outLogs.map(l=>l.item))];
+  if(groups.length > 6) groups = groups.slice(0,6);
 
-  const datasets = groups.map((g,i)=>{
-    const filtered = item ? outLogs : outLogs.filter(l=>l.item===g);
-    return { label: item ? (site||'전체') : g, data: months.map(m=> filtered.filter(l=>l.date.slice(0,7)===m).reduce((a,l)=>a+l.qty,0)), borderColor: CHART_COLORS[i%CHART_COLORS.length], backgroundColor:'transparent', tension:0.3, pointRadius:4 };
+  const datasets = groups.map((g,i) => {
+    const filtered = outLogs.filter(l => item ? (l.site||'-')===g : l.item===g);
+    return {
+      label: g,
+      data: months.map(m => filtered.filter(l=>l.date.slice(0,7)===m).reduce((a,l)=>a+l.qty,0)),
+      borderColor: CHART_COLORS[i%CHART_COLORS.length],
+      backgroundColor: CHART_COLORS[i%CHART_COLORS.length]+'33',
+      tension: 0.3, pointRadius: 5, fill: false
+    };
   });
 
+  const ctx = document.getElementById('an-chart').getContext('2d');
   anChart = new Chart(ctx, {
-    type:'line', data:{ labels: months, datasets },
-    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom', labels:{boxWidth:12,font:{size:11}} } }, scales:{ y:{ beginAtZero:true, ticks:{stepSize:1} } } }
+    type:'line', data:{ labels: months.map(m=>m.replace('-','년 ')+'월'), datasets },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:'bottom', labels:{boxWidth:12,font:{size:11}} } },
+      scales:{ y:{ beginAtZero:true } } }
   });
 
-  const tHead = `<tr><th>품목</th>${months.map(m=>`<th>${m}</th>`).join('')}<th>합계</th></tr>`;
-  const tBody = groups.map(g=>{
-    const filtered = item ? outLogs : outLogs.filter(l=>l.item===g);
-    const cells = months.map(m=> filtered.filter(l=>l.date.slice(0,7)===m).reduce((a,l)=>a+l.qty,0));
-    return `<tr><td>${item?'전체':g}</td>${cells.map(v=>`<td>${v||''}</td>`).join('')}<td>${cells.reduce((a,v)=>a+v,0)}</td></tr>`;
+  // 요약 카드
+  const total = outLogs.reduce((a,l)=>a+l.qty,0);
+  const maxM  = months.reduce((a,m)=>{ const s=outLogs.filter(l=>l.date.slice(0,7)===m).reduce((x,l)=>x+l.qty,0); return s>a.v?{m,v:s}:a; },{m:'-',v:0});
+  renderSummaryCards([
+    {label:'총 출고량', value:total+'개', color:'#185FA5'},
+    {label:'최다 출고월', value:maxM.m.replace('-','년 ')+'월', color:'#1D9E75'},
+    {label:'월 평균', value:Math.round(total/months.length)+'개', color:'#BA7517'},
+  ]);
+
+  // 테이블
+  const tHead = `<tr><th>${item?'현장':'품목'}</th>${months.map(m=>`<th>${m.slice(5)}월</th>`).join('')}<th>합계</th></tr>`;
+  const tBody = groups.map(g => {
+    const filtered = outLogs.filter(l => item ? (l.site||'-')===g : l.item===g);
+    const cells = months.map(m => filtered.filter(l=>l.date.slice(0,7)===m).reduce((a,l)=>a+l.qty,0));
+    return `<tr><td style="font-weight:500">${g}</td>${cells.map(v=>`<td>${v||'-'}</td>`).join('')}<td style="font-weight:500;color:#185FA5">${cells.reduce((a,v)=>a+v,0)}</td></tr>`;
   });
+  const totals = months.map(m=>outLogs.filter(l=>l.date.slice(0,7)===m).reduce((a,l)=>a+l.qty,0));
+  tBody.push(`<tr style="background:#E6F1FB;font-weight:500"><td>합계</td>${totals.map(v=>`<td>${v||'-'}</td>`).join('')}<td style="color:#185FA5">${totals.reduce((a,v)=>a+v,0)}</td></tr>`);
   document.getElementById('an-table').innerHTML = `<thead>${tHead}</thead><tbody>${tBody.join('')}</tbody>`;
 }
 
-function drawSiteTable(map, labels){
+// ── 연별 출고 비교 ──
+function drawYearlyCompare(outLogs, item, site, filterDesc){
+  document.getElementById('an-chart-title').textContent = `연별 출고 비교 — ${filterDesc}`;
+  const years = [...new Set(outLogs.map(l=>l.date.slice(0,4)))].sort();
+  const months12 = ['01','02','03','04','05','06','07','08','09','10','11','12'];
+
+  const datasets = years.map((y,i) => ({
+    label: y+'년',
+    data: months12.map(m => outLogs.filter(l=>l.date.startsWith(y+'-'+m)).reduce((a,l)=>a+l.qty,0)),
+    borderColor: CHART_COLORS[i%CHART_COLORS.length],
+    backgroundColor: CHART_COLORS[i%CHART_COLORS.length]+'33',
+    tension: 0.3, pointRadius: 5, fill: false
+  }));
+
+  const ctx = document.getElementById('an-chart').getContext('2d');
+  anChart = new Chart(ctx, {
+    type:'line', data:{ labels:months12.map(m=>m+'월'), datasets },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:'bottom', labels:{boxWidth:12,font:{size:11}} } },
+      scales:{ y:{ beginAtZero:true } } }
+  });
+
+  const total = outLogs.reduce((a,l)=>a+l.qty,0);
+  const bestY = years.reduce((a,y)=>{ const s=outLogs.filter(l=>l.date.startsWith(y)).reduce((x,l)=>x+l.qty,0); return s>a.v?{y,v:s}:a; },{y:'-',v:0});
+  renderSummaryCards([
+    {label:'전체 출고량', value:total+'개', color:'#185FA5'},
+    {label:'최다 출고연도', value:bestY.y+'년', color:'#1D9E75'},
+    {label:'분석 기간', value:years.length+'년', color:'#BA7517'},
+  ]);
+
+  // 테이블
+  const tHead = `<tr><th>연도</th>${months12.map(m=>`<th>${m}월</th>`).join('')}<th>합계</th></tr>`;
+  const tBody = years.map(y => {
+    const cells = months12.map(m => outLogs.filter(l=>l.date.startsWith(y+'-'+m)).reduce((a,l)=>a+l.qty,0));
+    return `<tr><td style="font-weight:500">${y}년</td>${cells.map(v=>`<td>${v||'-'}</td>`).join('')}<td style="font-weight:500;color:#185FA5">${cells.reduce((a,v)=>a+v,0)}</td></tr>`;
+  });
+  const totals = months12.map(m=>outLogs.filter(l=>l.date.slice(5,7)===m).reduce((a,l)=>a+l.qty,0));
+  tBody.push(`<tr style="background:#E6F1FB;font-weight:500"><td>합계</td>${totals.map(v=>`<td>${v||'-'}</td>`).join('')}<td style="color:#185FA5">${totals.reduce((a,v)=>a+v,0)}</td></tr>`);
+  document.getElementById('an-table').innerHTML = `<thead>${tHead}</thead><tbody>${tBody.join('')}</tbody>`;
+}
+
+// ── 현장별 막대 ──
+function drawSiteBar(outLogs, filterDesc){
+  document.getElementById('an-chart-title').textContent = `현장별 출고량 — ${filterDesc}`;
+  const map = {};
+  outLogs.forEach(l=>{ map[l.site||'-']=(map[l.site||'-']||0)+l.qty; });
+  const labels = Object.keys(map).sort((a,b)=>map[b]-map[a]);
+  const ctx = document.getElementById('an-chart').getContext('2d');
+  anChart = new Chart(ctx, {
+    type:'bar',
+    data:{ labels, datasets:[{ label:'출고량', data:labels.map(k=>map[k]), backgroundColor:labels.map((_,i)=>CHART_COLORS[i%CHART_COLORS.length]+'CC'), borderRadius:5 }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} }, scales:{ y:{ beginAtZero:true } } }
+  });
   const total = labels.reduce((a,k)=>a+map[k],0);
-  const rows = labels.map(k=>`<tr><td>${k}</td><td>${map[k]}</td><td>${total?Math.round(map[k]/total*100):0}%</td></tr>`);
+  renderSummaryCards([
+    {label:'총 출고량', value:total+'개', color:'#185FA5'},
+    {label:'현장 수', value:labels.length+'곳', color:'#1D9E75'},
+    {label:'최다 현장', value:labels[0]||'-', color:'#D85A30'},
+  ]);
+  const rows = labels.map(k=>`<tr><td style="font-weight:500">${k}</td><td>${map[k]}</td><td>${total?Math.round(map[k]/total*100):0}%</td></tr>`);
+  rows.push(`<tr style="background:#E6F1FB;font-weight:500"><td>합계</td><td style="color:#185FA5">${total}</td><td>100%</td></tr>`);
   document.getElementById('an-table').innerHTML=`<thead><tr><th>현장</th><th>출고량</th><th>비율</th></tr></thead><tbody>${rows.join('')}</tbody>`;
 }
 
-function drawItemTable(map, labels){
+// ── 품목별 막대 ──
+function drawItemBar(outLogs, filterDesc){
+  document.getElementById('an-chart-title').textContent = `품목별 출고량 — ${filterDesc}`;
+  const map = {};
+  outLogs.forEach(l=>{ map[l.item]=(map[l.item]||0)+l.qty; });
+  const labels = Object.keys(map).sort((a,b)=>map[b]-map[a]);
+  const ctx = document.getElementById('an-chart').getContext('2d');
+  anChart = new Chart(ctx, {
+    type:'bar',
+    data:{ labels, datasets:[{ label:'출고량', data:labels.map(k=>map[k]), backgroundColor:labels.map((_,i)=>CHART_COLORS[i%CHART_COLORS.length]+'CC'), borderRadius:5 }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} }, scales:{ y:{ beginAtZero:true } } }
+  });
   const total = labels.reduce((a,k)=>a+map[k],0);
-  const rows = labels.map(k=>`<tr><td>${k}</td><td>${map[k]}</td><td>${total?Math.round(map[k]/total*100):0}%</td></tr>`);
+  renderSummaryCards([
+    {label:'총 출고량', value:total+'개', color:'#185FA5'},
+    {label:'품목 수', value:labels.length+'종', color:'#1D9E75'},
+    {label:'최다 품목', value:labels[0]||'-', color:'#D85A30'},
+  ]);
+  const rows = labels.map(k=>`<tr><td style="font-weight:500">${k}</td><td>${map[k]}</td><td>${total?Math.round(map[k]/total*100):0}%</td></tr>`);
+  rows.push(`<tr style="background:#E6F1FB;font-weight:500"><td>합계</td><td style="color:#185FA5">${total}</td><td>100%</td></tr>`);
   document.getElementById('an-table').innerHTML=`<thead><tr><th>품목</th><th>출고량</th><th>비율</th></tr></thead><tbody>${rows.join('')}</tbody>`;
+}
+
+// ── 요약 카드 렌더 ──
+function renderSummaryCards(cards){
+  document.getElementById('an-summary').innerHTML = cards.map(c=>`
+    <div style="background:#fff;border:1px solid #B5D4F4;border-radius:8px;padding:10px 12px;text-align:center;">
+      <div style="font-size:11px;color:#555;margin-bottom:4px;">${c.label}</div>
+      <div style="font-size:17px;font-weight:500;color:${c.color};">${c.value}</div>
+    </div>
+  `).join('');
 }
 
 function showTab(tab){
