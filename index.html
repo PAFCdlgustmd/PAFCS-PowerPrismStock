@@ -622,19 +622,22 @@ async function loadFromCloud() {
 // ☁️ 구글 클라우드 시트에 실시간 데이터 쓰기
 async function saveToCloud() {
   if(!GOOGLE_WEB_APP_URL || GOOGLE_WEB_APP_URL.includes("여기에_복사한")) return;
-  setStatus("변경사항 클라우드 저장 중...");
-  try {
-    const payload = { logs: logs, sites: sites, writers: writers };
-    await fetch(GOOGLE_WEB_APP_URL, {
-      method: "POST",
-      body: JSON.stringify(payload),
-      headers: { "Content-Type": "text/plain" }
-    });
-    setStatus("✓ 변경사항 클라우드 저장 완료", "success");
-  } catch(e) {
+  setStatus("☁ 클라우드 저장 중...");
+  const payload = { logs: logs, sites: sites, writers: writers };
+  // 백그라운드 저장 - UI 멈춤 없이 즉시 반환
+  fetch(GOOGLE_WEB_APP_URL, {
+    method: "POST",
+    mode: "no-cors",
+    body: JSON.stringify(payload),
+    headers: { "Content-Type": "text/plain" }
+  }).then(() => {
+    setStatus("✓ 클라우드 저장 완료", "success");
+  }).catch(e => {
     console.error(e);
-    setStatus("저장 실패: 클라우드 연결이 일시적으로 끊겼습니다.", "error");
-  }
+    setStatus("저장 실패: 네트워크 오류", "error");
+  });
+  // fetch를 기다리지 않고 바로 완료 처리 (UI 즉시 응답)
+  setStatus("✓ 등록 완료 (저장 중...)", "success");
 }
 
 function formatDate(dateStr) {
@@ -738,7 +741,7 @@ async function addItem(){
   populateSels();
   document.getElementById('io-item').value = name;
   input.value = '';
-  await saveToCloud();
+  saveToCloud();
   alert(`"${name}" 품목이 추가되었습니다.`);
 }
 
@@ -756,7 +759,7 @@ async function deleteItem(){
   inv = inv.filter(i=>i.name!==name);
   populateSels();
   input.value = '';
-  await saveToCloud();
+  saveToCloud();
   alert(`"${name}" 품목이 삭제되었습니다.`);
 }
 
@@ -770,7 +773,7 @@ async function addSite(){
   renderSiteSel();
   document.getElementById('io-site-sel').value = name;
   input.value = '';
-  await saveToCloud();
+  saveToCloud();
 }
 
 async function delSite(){
@@ -781,7 +784,7 @@ async function delSite(){
   sites = sites.filter(s=>s!==name);
   
   renderSiteSel();
-  await saveToCloud();
+  saveToCloud();
 }
 
 function renderWriterSel(){
@@ -801,7 +804,7 @@ async function addWriter(){
   writers.push(name);
   renderWriterSel();
   input.value = '';
-  await saveToCloud();
+  saveToCloud();
   alert(`"${name}" 등록자가 추가되었습니다.`);
 }
 
@@ -814,7 +817,7 @@ async function delWriter(){
   writers = writers.filter(w => w !== name);
   renderWriterSel();
   input.value = '';
-  await saveToCloud();
+  saveToCloud();
 }
 
 function populateSels(){
@@ -863,7 +866,7 @@ async function registerIO(){
   document.getElementById('io-date').value = new Date().toISOString().slice(0,10);
   setTimeout(()=>msg.textContent='',3000);
 
-  await saveToCloud();
+  saveToCloud();
 }
 
 let parsedRows = [];
@@ -949,7 +952,7 @@ async function registerBulk() {
   msg.className = 'msg-ok'; msg.textContent = `✓ 총 ${successCount}건이 클라우드에 성공적으로 반영되었습니다.`;
   parsedRows = [];
 
-  await saveToCloud();
+  saveToCloud();
 }
 
 function renderLog(){
@@ -998,7 +1001,7 @@ async function deleteLog(logId) {
   renderInv();
   renderLog();
 
-  await saveToCloud();
+  saveToCloud();
 }
 
 async function clearAllLogs() {
@@ -1010,7 +1013,7 @@ async function clearAllLogs() {
   renderInv();
   renderLog();
 
-  await saveToCloud();
+  saveToCloud();
 }
 
 function populateAnalysisSels(){
@@ -1308,6 +1311,9 @@ document.getElementById('io-date').value = new Date().toISOString().slice(0,10);
 
 // 페이지가 로드되면 자동으로 클라우드 데이터를 불러옵니다.
 loadFromCloud();
+
+// 30초마다 자동 동기화 (동료가 등록한 내용 자동 반영)
+setInterval(() => { loadFromCloud(); }, 30000);
 </script>
 
 
