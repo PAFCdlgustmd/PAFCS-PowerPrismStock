@@ -856,7 +856,9 @@ function populateAnalysisSels(){
   anItem.innerHTML = '<option value="">전체 품목</option>';
   inv.forEach(i => anItem.innerHTML += `<option value="${i.name}">${i.name}</option>`);
 
-  const years = [...new Set(logs.filter(l=>l.date).map(l=>l.date.slice(0,4)))].sort((a,b)=>b-a);
+  const baseYears = new Set(['2024','2025','2026','2027']);
+  logs.filter(l=>l.date && /^\d{4}/.test(l.date)).forEach(l => baseYears.add(l.date.slice(0,4)));
+  const years = Array.from(baseYears).filter(y => /^\d{4}$/.test(y)).sort((a,b)=>b-a);
   anYear.innerHTML = '<option value="">전체 연도</option>';
   years.forEach(y => anYear.innerHTML += `<option value="${y}">${y}년</option>`);
 
@@ -940,7 +942,7 @@ function drawMonthlyTrend(outLogs, item, site, year, filterDesc){
 
   const ctx = document.getElementById('an-chart').getContext('2d');
   anChart = new Chart(ctx, {
-    type:'line', data:{ labels: months.map(m=>m.replace('-','년 ')+'월'), datasets },
+    type:'line', data:{ labels: months.map(m=>{ const [y,mo]=m.split('-'); return `${y}년 ${parseInt(mo)}월`; }), datasets },
     options:{ responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{ position:'bottom', labels:{boxWidth:12,font:{size:11}} } },
       scales:{ y:{ beginAtZero:true } } }
@@ -951,12 +953,12 @@ function drawMonthlyTrend(outLogs, item, site, year, filterDesc){
   const maxM  = months.reduce((a,m)=>{ const s=outLogs.filter(l=>l.date.slice(0,7)===m).reduce((x,l)=>x+l.qty,0); return s>a.v?{m,v:s}:a; },{m:'-',v:0});
   renderSummaryCards([
     {label:'총 출고량', value:total+'개', color:'#185FA5'},
-    {label:'최다 출고월', value:maxM.m.replace('-','년 ')+'월', color:'#1D9E75'},
+    {label:'최다 출고월', value:(()=>{ const [y,mo]=maxM.m.split('-'); return `${y}년 ${parseInt(mo)}월`; })(), color:'#1D9E75'},
     {label:'월 평균', value:Math.round(total/months.length)+'개', color:'#BA7517'},
   ]);
 
   // 테이블
-  const tHead = `<tr><th>${item?'현장':'품목'}</th>${months.map(m=>`<th>${m.slice(5)}월</th>`).join('')}<th>합계</th></tr>`;
+  const tHead = `<tr><th>${item?'현장':'품목'}</th>${months.map(m=>`<th>${parseInt(m.slice(5))}월</th>`).join('')}<th>합계</th></tr>`;
   const tBody = groups.map(g => {
     const filtered = outLogs.filter(l => item ? (l.site||'-')===g : l.item===g);
     const cells = months.map(m => filtered.filter(l=>l.date.slice(0,7)===m).reduce((a,l)=>a+l.qty,0));
