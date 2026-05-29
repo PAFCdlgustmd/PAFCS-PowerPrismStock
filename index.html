@@ -461,7 +461,7 @@ tr:hover td{background:#E6F1FB;}
           <option value="desc">날짜 최신순 (내림차순)</option>
           <option value="asc">날짜 과거순 (오름차순)</option>
         </select>
-        <button class="btn-clear-all" onclick="clearAllLogs()"><i class="ti ti-trash-x"></i> 이력 전체 삭제</button>
+        
       </div>
     </div>
     
@@ -606,14 +606,6 @@ async function loadFromCloud() {
     }));
     if(data.sites) sites = data.sites;
     if(data.writers) writers = data.writers;
-    // 품목 목록을 클라우드에서 불러와서 inv 업데이트
-    if(data.items && data.items.length > 0) {
-      data.items.forEach(itemName => {
-        if(!inv.find(i=>i.name===itemName)) {
-          inv.push({name: itemName, current: 0});
-        }
-      });
-    }
     
     updateYearSelectOptions();
     renderInv();
@@ -628,31 +620,21 @@ async function loadFromCloud() {
 }
 
 // ☁️ 구글 클라우드 시트에 실시간 데이터 쓰기
-// ☁️ 공통 POST 함수 (백그라운드, UI 멈춤 없음)
-function cloudPost(payload) {
+async function saveToCloud() {
   if(!GOOGLE_WEB_APP_URL || GOOGLE_WEB_APP_URL.includes("여기에_복사한")) return;
-  fetch(GOOGLE_WEB_APP_URL, {
-    method: "POST",
-    mode: "no-cors",
-    body: JSON.stringify(payload),
-    headers: { "Content-Type": "text/plain" }
-  }).catch(e => console.error('클라우드 오류:', e));
-}
-
-// ☁️ 1건 추가 (빠름)
-function appendToCloud(log) { cloudPost({ action: 'append', log }); }
-
-// ☁️ 1건 삭제 (빠름)
-function deleteFromCloud(id) { cloudPost({ action: 'delete', id }); }
-
-// ☁️ 현장·작성자·품목 저장 (빠름)
-function saveMetaToCloud() {
-  cloudPost({ action: 'saveMeta', sites, writers, items: inv.map(i=>i.name) });
-}
-
-// ☁️ 전체 저장 (대량등록·전체삭제)
-function saveToCloud() {
-  cloudPost({ logs, sites, writers, items: inv.map(i=>i.name) });
+  setStatus("변경사항 클라우드 저장 중...");
+  try {
+    const payload = { logs: logs, sites: sites, writers: writers };
+    await fetch(GOOGLE_WEB_APP_URL, {
+      method: "POST",
+      body: JSON.stringify(payload),
+      headers: { "Content-Type": "text/plain" }
+    });
+    setStatus("✓ 변경사항 클라우드 저장 완료", "success");
+  } catch(e) {
+    console.error(e);
+    setStatus("저장 실패: 클라우드 연결이 일시적으로 끊겼습니다.", "error");
+  }
 }
 
 function formatDate(dateStr) {
@@ -756,7 +738,7 @@ async function addItem(){
   populateSels();
   document.getElementById('io-item').value = name;
   input.value = '';
-  saveMetaToCloud();
+  await saveToCloud();
   alert(`"${name}" 품목이 추가되었습니다.`);
 }
 
@@ -774,7 +756,7 @@ async function deleteItem(){
   inv = inv.filter(i=>i.name!==name);
   populateSels();
   input.value = '';
-  saveMetaToCloud();
+  await saveToCloud();
   alert(`"${name}" 품목이 삭제되었습니다.`);
 }
 
@@ -788,7 +770,7 @@ async function addSite(){
   renderSiteSel();
   document.getElementById('io-site-sel').value = name;
   input.value = '';
-  saveMetaToCloud();
+  await saveToCloud();
 }
 
 async function delSite(){
@@ -799,7 +781,7 @@ async function delSite(){
   sites = sites.filter(s=>s!==name);
   
   renderSiteSel();
-  saveMetaToCloud();
+  await saveToCloud();
 }
 
 function renderWriterSel(){
@@ -819,7 +801,7 @@ async function addWriter(){
   writers.push(name);
   renderWriterSel();
   input.value = '';
-  saveMetaToCloud();
+  await saveToCloud();
   alert(`"${name}" 등록자가 추가되었습니다.`);
 }
 
@@ -832,7 +814,7 @@ async function delWriter(){
   writers = writers.filter(w => w !== name);
   renderWriterSel();
   input.value = '';
-  saveMetaToCloud();
+  await saveToCloud();
 }
 
 function populateSels(){
@@ -867,13 +849,12 @@ async function registerIO(){
   
   const uniqueId = Date.now() + '-' + Math.floor(Math.random()*1000);
   const writer = document.getElementById('io-writer')?.value || '';
-  const newLog = {id:uniqueId, date:today, type, item, site, hogi:hogs, qty, note, writer};
-  logs.unshift(newLog);
-
+  logs.unshift({id:uniqueId, date:today, type, item, site, hogi:hogs, qty, note, writer});
+  
   updateYearSelectOptions();
   renderInv();
   renderLog();
-
+  
   msg.className='msg-ok';
   msg.textContent=`✓ ${item} ${type==='in'?'입고':'출고'} ${qty}개 등록 완료`;
   document.getElementById('io-qty').value='';
@@ -882,8 +863,7 @@ async function registerIO(){
   document.getElementById('io-date').value = new Date().toISOString().slice(0,10);
   setTimeout(()=>msg.textContent='',3000);
 
-  // 1행만 추가 (빠름)
-  appendToCloud(newLog);
+  await saveToCloud();
 }
 
 let parsedRows = [];
@@ -969,7 +949,7 @@ async function registerBulk() {
   msg.className = 'msg-ok'; msg.textContent = `✓ 총 ${successCount}건이 클라우드에 성공적으로 반영되었습니다.`;
   parsedRows = [];
 
-  saveToCloud();
+  await saveToCloud();
 }
 
 function renderLog(){
@@ -1017,21 +997,10 @@ async function deleteLog(logId) {
   updateYearSelectOptions();
   renderInv();
   renderLog();
-  // 해당 행만 삭제 (빠름)
-  deleteFromCloud(logId);
+
+  await saveToCloud();
 }
 
-async function clearAllLogs() {
-  if (logs.length === 0) { alert("삭제할 이력이 없습니다."); return; }
-  if(!confirm("모든 이력을 완전히 삭제하고 전체 초기화하겠습니까?")) return;
-  logs = [];
-  inv = inv.map(i => ({ name: i.name, current: 0 }));
-  updateYearSelectOptions();
-  renderInv();
-  renderLog();
-
-  saveToCloud();
-}
 
 function populateAnalysisSels(){
   const anSite = document.getElementById('an-site');
