@@ -620,24 +620,35 @@ async function loadFromCloud() {
 }
 
 // ☁️ 구글 클라우드 시트에 실시간 데이터 쓰기
-async function saveToCloud() {
+// ☁️ 공통 POST 함수
+function cloudPost(payload) {
   if(!GOOGLE_WEB_APP_URL || GOOGLE_WEB_APP_URL.includes("여기에_복사한")) return;
-  setStatus("☁ 클라우드 저장 중...");
-  const payload = { logs: logs, sites: sites, writers: writers };
-  // 백그라운드 저장 - UI 멈춤 없이 즉시 반환
   fetch(GOOGLE_WEB_APP_URL, {
     method: "POST",
     mode: "no-cors",
     body: JSON.stringify(payload),
     headers: { "Content-Type": "text/plain" }
-  }).then(() => {
-    setStatus("✓ 클라우드 저장 완료", "success");
-  }).catch(e => {
-    console.error(e);
-    setStatus("저장 실패: 네트워크 오류", "error");
-  });
-  // fetch를 기다리지 않고 바로 완료 처리 (UI 즉시 응답)
-  setStatus("✓ 등록 완료 (저장 중...)", "success");
+  }).catch(e => console.error('클라우드 저장 오류:', e));
+}
+
+// ☁️ 1건만 append (빠름)
+function appendToCloud(log) {
+  cloudPost({ action: 'append', log });
+}
+
+// ☁️ id로 1행 삭제 (빠름)
+function deleteFromCloud(id) {
+  cloudPost({ action: 'delete', id });
+}
+
+// ☁️ 현장·작성자만 저장 (빠름)
+function saveMetaToCloud() {
+  cloudPost({ action: 'saveMeta', sites, writers });
+}
+
+// ☁️ 전체 저장 (대량등록·전체삭제 시 사용)
+function saveToCloud() {
+  cloudPost({ logs, sites, writers });
 }
 
 function formatDate(dateStr) {
@@ -741,7 +752,7 @@ async function addItem(){
   populateSels();
   document.getElementById('io-item').value = name;
   input.value = '';
-  saveToCloud();
+  saveMetaToCloud();
   alert(`"${name}" 품목이 추가되었습니다.`);
 }
 
@@ -759,7 +770,7 @@ async function deleteItem(){
   inv = inv.filter(i=>i.name!==name);
   populateSels();
   input.value = '';
-  saveToCloud();
+  saveMetaToCloud();
   alert(`"${name}" 품목이 삭제되었습니다.`);
 }
 
@@ -769,11 +780,10 @@ async function addSite(){
   if(!name){ alert('현장명을 입력하세요.'); return; }
   if(sites.includes(name)){ alert('이미 존재하는 현장입니다.'); return; }
   sites.push(name);
-  
   renderSiteSel();
   document.getElementById('io-site-sel').value = name;
   input.value = '';
-  saveToCloud();
+  saveMetaToCloud();
 }
 
 async function delSite(){
@@ -782,9 +792,8 @@ async function delSite(){
   if(!name){ alert('삭제할 현장을 먼저 선택하세요.'); return; }
   if(!confirm(`"${name}" 현장을 목록에서 삭제할까요?\n(이미 등록된 이력은 유지됩니다)`)) return;
   sites = sites.filter(s=>s!==name);
-  
   renderSiteSel();
-  saveToCloud();
+  saveMetaToCloud();
 }
 
 function renderWriterSel(){
@@ -804,7 +813,7 @@ async function addWriter(){
   writers.push(name);
   renderWriterSel();
   input.value = '';
-  saveToCloud();
+  saveMetaToCloud();
   alert(`"${name}" 등록자가 추가되었습니다.`);
 }
 
@@ -817,7 +826,7 @@ async function delWriter(){
   writers = writers.filter(w => w !== name);
   renderWriterSel();
   input.value = '';
-  saveToCloud();
+  saveMetaToCloud();
 }
 
 function populateSels(){
@@ -852,12 +861,13 @@ async function registerIO(){
   
   const uniqueId = Date.now() + '-' + Math.floor(Math.random()*1000);
   const writer = document.getElementById('io-writer')?.value || '';
-  logs.unshift({id:uniqueId, date:today, type, item, site, hogi:hogs, qty, note, writer});
-  
+  const newLog = {id:uniqueId, date:today, type, item, site, hogi:hogs, qty, note, writer};
+  logs.unshift(newLog);
+
   updateYearSelectOptions();
   renderInv();
   renderLog();
-  
+
   msg.className='msg-ok';
   msg.textContent=`✓ ${item} ${type==='in'?'입고':'출고'} ${qty}개 등록 완료`;
   document.getElementById('io-qty').value='';
@@ -866,7 +876,8 @@ async function registerIO(){
   document.getElementById('io-date').value = new Date().toISOString().slice(0,10);
   setTimeout(()=>msg.textContent='',3000);
 
-  saveToCloud();
+  // 1행만 추가 (빠름)
+  appendToCloud(newLog);
 }
 
 let parsedRows = [];
@@ -951,7 +962,6 @@ async function registerBulk() {
   
   msg.className = 'msg-ok'; msg.textContent = `✓ 총 ${successCount}건이 클라우드에 성공적으로 반영되었습니다.`;
   parsedRows = [];
-
   saveToCloud();
 }
 
@@ -995,13 +1005,12 @@ async function deleteLog(logId) {
   const targetIndex = logs.findIndex(l => l.id === logId);
   if (targetIndex === -1) return;
   if(!confirm(`선택한 한 건의 이력을 삭제하겠습니까?`)) return;
-
   logs.splice(targetIndex, 1);
   updateYearSelectOptions();
   renderInv();
   renderLog();
-
-  saveToCloud();
+  // 해당 행만 삭제 (빠름)
+  deleteFromCloud(logId);
 }
 
 async function clearAllLogs() {
@@ -1012,7 +1021,7 @@ async function clearAllLogs() {
   updateYearSelectOptions();
   renderInv();
   renderLog();
-
+  // 전체 삭제는 전체 저장
   saveToCloud();
 }
 
@@ -1311,9 +1320,6 @@ document.getElementById('io-date').value = new Date().toISOString().slice(0,10);
 
 // 페이지가 로드되면 자동으로 클라우드 데이터를 불러옵니다.
 loadFromCloud();
-
-// 30초마다 자동 동기화 (동료가 등록한 내용 자동 반영)
-setInterval(() => { loadFromCloud(); }, 30000);
 </script>
 
 
