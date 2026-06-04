@@ -520,29 +520,29 @@ tr:hover td{background:#E6F1FB;}
 const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw7z4yVAkV7S_AhmdHc3eAc0XjklyB_kxbZSyY4CgNIsIHslYkIwc96L9IRJUO0ilJa/exec";
 
 const BASE = [
-  {name:"레진(후지전기)",              initial:0},
-  {name:"레진(삼양사)",                initial:0},
-  {name:"물필터",                      initial:0},
-  {name:"레진헤드",                    initial:0},
-  {name:"집수봉",                      initial:0},
-  {name:"활성탄필터",                  initial:0},
-  {name:"마이크로필터",                initial:0},
-  {name:"인버터필터",                  initial:0},
-  {name:"개질기필터",                  initial:0},
-  {name:"GS-23",                       initial:0},
-  {name:"GS-6",                        initial:0},
-  {name:"방열팬",                      initial:0},
-  {name:"안전밸브(SV-960)",            initial:0},
-  {name:"안전밸브(SV-530)",            initial:0},
-  {name:"F-07 오프가스필터",           initial:0},
-  {name:"F-07 필터(설치용 O링)",       initial:0},
-  {name:"DCCT 냉각판",                 initial:0},
-  {name:"IV 유닛 냉각팬",              initial:0},
-  {name:"UPS 배터리",                  initial:0},
-  {name:"E-12열교환기",                initial:0},
-  {name:"FAN-02(인버터 필터 상부 FAN)",initial:0},
-  {name:"AI 모듈 (TC)",                initial:0},
-  {name:"AI 모듈 (PT)",                initial:0},
+  {name:"레진(후지전기)",              initial:0, warnAt:60,  dangerAt:48},
+  {name:"레진(삼양사)",                initial:0, warnAt:48,  dangerAt:16},
+  {name:"물필터",                      initial:0, warnAt:20,  dangerAt:16},
+  {name:"레진헤드",                    initial:0, warnAt:10,  dangerAt:5},
+  {name:"집수봉",                      initial:0, warnAt:5,   dangerAt:2},
+  {name:"활성탄필터",                  initial:0, warnAt:19,  dangerAt:10},
+  {name:"마이크로필터",                initial:0, warnAt:19,  dangerAt:10},
+  {name:"인버터필터",                  initial:0, warnAt:19,  dangerAt:10},
+  {name:"개질기필터",                  initial:0, warnAt:19,  dangerAt:10},
+  {name:"GS-23",                       initial:0, warnAt:300, dangerAt:200},
+  {name:"GS-6",                        initial:0, warnAt:100, dangerAt:70},
+  {name:"방열팬",                      initial:0, warnAt:10,  dangerAt:5},
+  {name:"안전밸브(SV-960)",            initial:0, warnAt:0,   dangerAt:0,  alwaysOk:true},
+  {name:"안전밸브(SV-530)",            initial:0, warnAt:0,   dangerAt:0,  alwaysOk:true},
+  {name:"F-07 오프가스필터",           initial:0, warnAt:0,   dangerAt:0,  alwaysOk:true},
+  {name:"F-07 필터(설치용 O링)",       initial:0, warnAt:0,   dangerAt:0,  alwaysOk:true},
+  {name:"DCCT 냉각팬",                 initial:0, warnAt:0,   dangerAt:0,  alwaysOk:true},
+  {name:"IV 유닛 냉각팬",              initial:0, warnAt:0,   dangerAt:0,  alwaysOk:true},
+  {name:"UPS 배터리",                  initial:0, warnAt:10,  dangerAt:5},
+  {name:"E-12열교환기",                initial:0, warnAt:0,   dangerAt:0,  alwaysOk:true},
+  {name:"FAN-02(인버터 필터 상부 FAN)",initial:0, warnAt:0,   dangerAt:0,  alwaysOk:true},
+  {name:"AI 모듈 (TC)",                initial:0, warnAt:0,   dangerAt:0,  alwaysOk:true},
+  {name:"AI 모듈 (PT)",                initial:0, warnAt:0,   dangerAt:0,  alwaysOk:true},
 ];
 
 const DEFAULT_SITES = [
@@ -551,7 +551,7 @@ const DEFAULT_SITES = [
   "중구수영장", "후지전기"
 ];
 
-let inv = BASE.map(i=>({name:i.name, current:0})); 
+let inv = BASE.map(i=>({name:i.name, current:0, warnAt:i.warnAt, dangerAt:i.dangerAt, alwaysOk:i.alwaysOk||false})); 
 let logs = [];
 let sites = [...DEFAULT_SITES];
 let writers = [];
@@ -618,7 +618,10 @@ async function loadFromCloud() {
     if(data.sites) sites = data.sites;
     if(data.writers) writers = data.writers;
     if(data.items && data.items.length > 0) {
-      inv = data.items.map(name => ({ name, current: 0 }));
+      inv = data.items.map(name => {
+        const base = BASE.find(b => b.name === name);
+        return { name, current: 0, warnAt: base ? base.warnAt : 20, dangerAt: base ? base.dangerAt : 5, alwaysOk: base ? (base.alwaysOk||false) : false };
+      });
     }
     
     updateYearSelectOptions();
@@ -696,17 +699,18 @@ function formatDate(dateStr) {
   return `${dateStr} ${days[d.getDay()]}`;
 }
 
-function status(q){
-  if(q<=5)  return '<span class="badge b-danger">부족</span>';
-  if(q<=20) return '<span class="badge b-warn">주의</span>';
+function status(q, warnAt, dangerAt, alwaysOk){
+  if(alwaysOk) return '<span class="badge b-ok">정상</span>';
+  if(q <= dangerAt) return '<span class="badge b-danger">부족</span>';
+  if(q <= warnAt)   return '<span class="badge b-warn">주의</span>';
   return '<span class="badge b-ok">정상</span>';
 }
 
 function renderStats(){
   const total = inv.reduce((a,i)=>a+i.current,0);
-  const ok    = inv.filter(i=>i.current>20).length;
-  const warn  = inv.filter(i=>i.current>5&&i.current<=20).length;
-  const low   = inv.filter(i=>i.current<=5).length;
+  const ok    = inv.filter(i=>i.alwaysOk || i.current > i.warnAt).length;
+  const warn  = inv.filter(i=>!i.alwaysOk && i.current > i.dangerAt && i.current <= i.warnAt).length;
+  const low   = inv.filter(i=>!i.alwaysOk && i.current <= i.dangerAt).length;
   document.getElementById('stats-grid').innerHTML=`
     <div class="sc sc-blue"><div class="sc-label"><i class="ti ti-box"></i> 전체 재고</div><div class="sc-val">${total}</div></div>
     <div class="sc sc-green"><div class="sc-label"><i class="ti ti-circle-check"></i> 정상 품목</div><div class="sc-val">${ok}</div></div>
@@ -748,7 +752,7 @@ function renderInv(){
     const yearIn = logs.filter(l => l.item === item.name && l.type === 'in' && l.date.startsWith(selectedYear)).reduce((a,l)=>a+l.qty, 0);
     const yearOut = logs.filter(l => l.item === item.name && l.type === 'out' && l.date.startsWith(selectedYear)).reduce((a,l)=>a+l.qty, 0);
     
-    return { name: item.name, current: item.current, yearIn: yearIn, yearOut: yearOut };
+    return { name: item.name, current: item.current, yearIn: yearIn, yearOut: yearOut, warnAt: item.warnAt, dangerAt: item.dangerAt, alwaysOk: item.alwaysOk };
   });
 
   document.getElementById('inventory-tbody').innerHTML = computedInv.map(i=>`
@@ -757,7 +761,7 @@ function renderInv(){
       <td style="font-weight:500;color:#0C447C">${i.current}</td>
       <td style="color:#222; font-weight: 500;">${i.yearIn}</td>
       <td style="color:#666">${i.yearOut}</td>
-      <td>${status(i.current)}</td>
+      <td>${status(i.current, i.warnAt, i.dangerAt, i.alwaysOk)}</td>
     </tr>
   `).join('');
   
