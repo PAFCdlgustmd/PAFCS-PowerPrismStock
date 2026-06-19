@@ -9,7 +9,9 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:sans-serif;background:#f4f6fa;min-height:100vh;padding:1.5rem;}
-.app{max-width:780px;margin:0 auto;}
+.app{max-width:1400px;margin:0 auto;}
+/* 분석탭 테이블 전용 래퍼 - 넓게 활용 */
+.an-full-wrap{width:100%;}
 .topbar{background:#185FA5;border-radius:12px;padding:1rem 1.25rem;margin-bottom:1.25rem;display:flex;align-items:center;justify-content:space-between;}
 .topbar-title{color:#E6F1FB;font-size:17px;font-weight:500;display:flex;align-items:center;gap:10px;}
 .topbar-date{color:#85B7EB;font-size:12px;}
@@ -84,16 +86,20 @@ tr:hover td{background:#E6F1FB;}
 .chart-wrap{background:#fff;border:0.5px solid #ddd;border-radius:12px;padding:1rem 1.25rem;margin-bottom:1.25rem;}
 .chart-title{font-size:13px;font-weight:500;color:#185FA5;margin-bottom:12px;}
 .chart-canvas{width:100%;height:240px;}
-.an-table-wrap{background:#fff;border:0.5px solid #ddd;border-radius:12px;overflow-x:auto;overflow-y:visible;margin-bottom:1.25rem;}
-.an-table{width:auto;min-width:100%;border-collapse:separate;border-spacing:0;font-size:12px;}
-.an-table th{padding:7px 10px;background:#E6F1FB;color:#185FA5;font-weight:500;border-bottom:0.5px solid #B5D4F4;text-align:center;white-space:nowrap;position:sticky;top:0;z-index:1;}
-.an-table td{padding:7px 10px;border-bottom:0.5px solid #eee;text-align:center;color:#222;white-space:nowrap;}
+.an-table-wrap{background:#fff;border:0.5px solid #ddd;border-radius:12px;overflow-x:auto;overflow-y:visible;margin-bottom:1.25rem;width:100%;}
+.an-table{width:100%;border-collapse:separate;border-spacing:0;font-size:11px;table-layout:auto;}
+.an-table th{padding:5px 6px;background:#E6F1FB;color:#185FA5;font-weight:500;border-bottom:0.5px solid #B5D4F4;text-align:center;white-space:nowrap;position:sticky;top:0;z-index:1;}
+.an-table td{padding:5px 6px;border-bottom:0.5px solid #eee;text-align:center;color:#222;white-space:nowrap;}
 .an-table tr:last-child td{border-bottom:none;font-weight:500;background:#f8fafd;}
-.an-table td:first-child,.an-table th:first-child{text-align:left;font-weight:500;position:sticky;left:0;z-index:2;background:#E6F1FB;min-width:90px;max-width:90px;overflow:hidden;text-overflow:ellipsis;}
+.an-table td:first-child,.an-table th:first-child{text-align:left;font-weight:500;position:sticky;left:0;z-index:2;background:#E6F1FB;min-width:80px;max-width:110px;overflow:hidden;text-overflow:ellipsis;}
 .an-table td:first-child{background:#fff;}
 .an-table tr:last-child td:first-child{background:#f8fafd;}
-.an-table th.yr-header{background:#d4e8f8;color:#0C447C;font-size:11px;padding:4px 10px;border-bottom:0.5px solid #B5D4F4;}
+.an-table th.yr-header{background:#d4e8f8;color:#0C447C;font-size:10px;padding:4px 6px;border-bottom:0.5px solid #B5D4F4;}
 .an-table th.yr-header:first-child{position:sticky;left:0;z-index:3;}
+/* 기말재고 열 강조 - 마지막 열 고정 */
+.an-table td.col-ending{background:#EAF3FA;color:#185FA5;font-weight:700;position:sticky;right:0;z-index:2;border-left:2px solid #B5D4F4;}
+.an-table th.col-ending{background:#d4e8f8;color:#0C447C;font-weight:700;position:sticky;right:0;z-index:3;border-left:2px solid #B5D4F4;}
+.an-table tr:last-child td.col-ending{background:#c8dfef;}
 
 .bulk-section { margin-top: 20px; border-top: 2px dashed #B5D4F4; padding-top: 20px; }
 .bulk-textarea { width: 100%; height: 100px; padding: 10px; font-size: 12px; border: 1px solid #ccc; border-radius: 8px; font-family: monospace; resize: vertical; outline: none; }
@@ -123,7 +129,7 @@ tr:hover td{background:#E6F1FB;}
 
 /* 📱 모바일 반응형 */
 @media (max-width: 540px) {
-  body { padding: 0.75rem; }
+  body { padding: 0.5rem; }
 
   /* 상단 요약 카드: 2x2 그리드 */
   .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
@@ -201,6 +207,39 @@ tr:hover td{background:#E6F1FB;}
   #tab-analysis .an-filter { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
   #tab-analysis > div:first-child > div:last-child { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
   #tab-analysis > div:first-child > div:last-child button { font-size: 11px; padding: 7px 4px; }
+
+  /* 분석 테이블 모바일: 가로 스크롤 + 폰트 더 축소 */
+  .an-table-wrap { border-radius: 8px; }
+  .an-table { font-size: 10px; }
+  .an-table th { padding: 4px 4px; font-size: 10px; }
+  .an-table td { padding: 4px 4px; font-size: 10px; }
+  .an-table td:first-child, .an-table th:first-child { min-width: 64px; max-width: 80px; font-size: 10px; }
+  .an-table td.col-ending, .an-table th.col-ending { font-size: 10px; padding: 4px 5px; }
+}
+
+/* 태블릿: 중간 크기 최적화 */
+@media (min-width: 541px) and (max-width: 900px) {
+  .an-table { font-size: 11px; }
+  .an-table th, .an-table td { padding: 5px 5px; }
+  .an-table td:first-child, .an-table th:first-child { min-width: 80px; max-width: 100px; }
+}
+
+/* PC: 여유 있게 */
+@media (min-width: 901px) {
+  .an-table { font-size: 12px; }
+  .an-table th, .an-table td { padding: 6px 8px; }
+  .an-table td:first-child, .an-table th:first-child { min-width: 100px; max-width: 140px; }
+}
+
+/* 프린트 대응 */
+@media print {
+  body { background: #fff; padding: 0; }
+  .topbar, .cloud-bar, .tabs, .log-tools, .btn-sync { display: none !important; }
+  .an-table-wrap { overflow: visible !important; border: 1px solid #ccc; }
+  .an-table { font-size: 10px; width: 100%; }
+  .an-table th, .an-table td { padding: 4px 5px; white-space: normal; }
+  .an-table td:first-child, .an-table th:first-child { position: static; min-width: 80px; }
+  .an-table td.col-ending, .an-table th.col-ending { position: static; background: #d4e8f8 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 </style>
 </head>
@@ -1316,7 +1355,7 @@ function drawEndingStock(filterItem, year, site, hogi, filterDesc) {
       ${months12.map(m=>`<th>${parseInt(m)}월말</th>`).join('')}
       <th style="color:#1D9E75">총입고</th>
       <th style="color:#D85A30">총출고</th>
-      <th style="color:#185FA5;background:#d4e8f8;">${targetYear}년<br>기말재고</th>
+      <th class="col-ending">${targetYear}년<br>기말재고</th>
     </tr>`;
     const tBody = itemResults.map(i =>
       `<tr>
@@ -1324,7 +1363,7 @@ function drawEndingStock(filterItem, year, site, hogi, filterDesc) {
         ${i.monthlyEnd.map(v=>`<td>${v}</td>`).join('')}
         <td style="color:#1D9E75;font-weight:500">${i.totalIn}</td>
         <td style="color:#D85A30;font-weight:500">${i.totalOut}</td>
-        <td style="color:#185FA5;font-weight:700;background:#EAF3FA;">${i.endStock}</td>
+        <td class="col-ending">${i.endStock}</td>
       </tr>`
     );
     tBody.push(`<tr style="background:#E6F1FB;font-weight:500">
@@ -1332,7 +1371,7 @@ function drawEndingStock(filterItem, year, site, hogi, filterDesc) {
       ${months12.map((_,mi)=>`<td>${itemResults.reduce((a,i)=>a+i.monthlyEnd[mi],0)}</td>`).join('')}
       <td style="color:#1D9E75">${grandIn}</td>
       <td style="color:#D85A30">${grandOut}</td>
-      <td style="color:#185FA5;font-weight:700;background:#d4e8f8;">${grandEnd}</td>
+      <td class="col-ending">${grandEnd}</td>
     </tr>`);
     document.getElementById('an-table').innerHTML = `<thead>${tHead}</thead><tbody>${tBody.join('')}</tbody>`;
   }
