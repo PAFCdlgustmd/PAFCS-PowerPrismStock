@@ -1081,25 +1081,56 @@ function editLog(logId) {
 
   row.outerHTML = `
     <div class="log-edit-row" id="log-row-${logId}">
-      <select id="edit-type-${logId}" style="width:70px;">
-        <option value="in" ${l.type==='in'?'selected':''}>입고</option>
-        <option value="out" ${l.type==='out'?'selected':''}>출고</option>
-      </select>
-      <input type="text" id="edit-date-${logId}" value="${l.date||''}" placeholder="날짜" style="width:110px;">
-      <select id="edit-item-${logId}" style="flex:1;min-width:100px;">
-        <option value="">품목 선택</option>${itemOptions}
-      </select>
-      <select id="edit-site-${logId}" style="flex:1;min-width:90px;">
-        <option value="">현장 선택</option>${siteOptions}
-      </select>
-      <input type="text" id="edit-hogi-${logId}" value="${l.hogi||''}" placeholder="호기" style="width:50px;">
-      <input type="number" id="edit-qty-${logId}" value="${l.qty||0}" placeholder="수량" style="width:60px;">
-      <select id="edit-writer-${logId}" style="width:80px;">
-        <option value="">등록자</option>${writerOptions}
-      </select>
-      <input type="text" id="edit-note-${logId}" value="${l.note||''}" placeholder="비고" style="flex:1;min-width:60px;">
-      <button class="btn-log-save" onclick="saveLog('${logId}')">저장</button>
-      <button class="btn-log-cancel" onclick="cancelEdit()">취소</button>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;width:100%;align-items:flex-end;">
+        <div style="display:flex;flex-direction:column;gap:3px;">
+          <span style="font-size:10px;color:#185FA5;font-weight:500;padding-left:2px;">입/출고 구분</span>
+          <select id="edit-type-${logId}" style="width:80px;font-size:12px;padding:5px 8px;border:1px solid #B5D4F4;border-radius:6px;outline:none;background:#fff;">
+            <option value="in" ${l.type==='in'?'selected':''}>입고</option>
+            <option value="out" ${l.type==='out'?'selected':''}>출고</option>
+          </select>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:3px;">
+          <span style="font-size:10px;color:#185FA5;font-weight:500;padding-left:2px;">날짜</span>
+          <input type="text" id="edit-date-${logId}" value="${l.date||''}" placeholder="YYYY-MM-DD" style="width:115px;font-size:12px;padding:5px 8px;border:1px solid #B5D4F4;border-radius:6px;outline:none;background:#fff;">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:100px;">
+          <span style="font-size:10px;color:#185FA5;font-weight:500;padding-left:2px;">품목</span>
+          <select id="edit-item-${logId}" style="width:100%;font-size:12px;padding:5px 8px;border:1px solid #B5D4F4;border-radius:6px;outline:none;background:#fff;">
+            <option value="">품목 선택</option>${itemOptions}
+          </select>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:90px;">
+          <span style="font-size:10px;color:#185FA5;font-weight:500;padding-left:2px;">현장명</span>
+          <select id="edit-site-${logId}" style="width:100%;font-size:12px;padding:5px 8px;border:1px solid #B5D4F4;border-radius:6px;outline:none;background:#fff;">
+            <option value="">현장 선택</option>${siteOptions}
+          </select>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:3px;">
+          <span style="font-size:10px;color:#185FA5;font-weight:500;padding-left:2px;">호기</span>
+          <input type="text" id="edit-hogi-${logId}" value="${l.hogi||''}" placeholder="호기" style="width:55px;font-size:12px;padding:5px 8px;border:1px solid #B5D4F4;border-radius:6px;outline:none;background:#fff;">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:3px;">
+          <span style="font-size:10px;color:#185FA5;font-weight:500;padding-left:2px;">수량</span>
+          <input type="number" id="edit-qty-${logId}" value="${l.qty||0}" placeholder="수량" style="width:65px;font-size:12px;padding:5px 8px;border:1px solid #B5D4F4;border-radius:6px;outline:none;background:#fff;">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:3px;">
+          <span style="font-size:10px;color:#185FA5;font-weight:500;padding-left:2px;">등록자</span>
+          <select id="edit-writer-${logId}" style="width:85px;font-size:12px;padding:5px 8px;border:1px solid #B5D4F4;border-radius:6px;outline:none;background:#fff;">
+            <option value="">등록자</option>${writerOptions}
+          </select>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:60px;">
+          <span style="font-size:10px;color:#185FA5;font-weight:500;padding-left:2px;">비고</span>
+          <input type="text" id="edit-note-${logId}" value="${l.note||''}" placeholder="비고" style="width:100%;font-size:12px;padding:5px 8px;border:1px solid #B5D4F4;border-radius:6px;outline:none;background:#fff;">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:3px;justify-content:flex-end;">
+          <span style="font-size:10px;color:transparent;padding-left:2px;">ㅤ</span>
+          <div style="display:flex;gap:4px;">
+            <button class="btn-log-save" onclick="saveLog('${logId}')">저장</button>
+            <button class="btn-log-cancel" onclick="cancelEdit()">취소</button>
+          </div>
+        </div>
+      </div>
     </div>
   `;
 }
@@ -1279,15 +1310,21 @@ function drawEndingStock(filterItem, year, site, hogi, filterDesc) {
       {label:`${targetYear}년 기말재고 합계`, value: grandEnd+'개', color:'#185FA5'},
     ]);
 
-    // 테이블: 품목 × 월별 기말재고
-    const tHead = `<tr><th>품목</th>${months12.map(m=>`<th>${parseInt(m)}월말</th>`).join('')}<th>총입고</th><th>총출고</th><th>기말재고</th></tr>`;
+    // 테이블: 품목 × 월별 기말재고 + 연도별 기말재고 열
+    const tHead = `<tr>
+      <th>품목</th>
+      ${months12.map(m=>`<th>${parseInt(m)}월말</th>`).join('')}
+      <th style="color:#1D9E75">총입고</th>
+      <th style="color:#D85A30">총출고</th>
+      <th style="color:#185FA5;background:#d4e8f8;">${targetYear}년<br>기말재고</th>
+    </tr>`;
     const tBody = itemResults.map(i =>
       `<tr>
         <td style="font-weight:500">${i.name}</td>
         ${i.monthlyEnd.map(v=>`<td>${v}</td>`).join('')}
         <td style="color:#1D9E75;font-weight:500">${i.totalIn}</td>
         <td style="color:#D85A30;font-weight:500">${i.totalOut}</td>
-        <td style="color:#185FA5;font-weight:500">${i.endStock}</td>
+        <td style="color:#185FA5;font-weight:700;background:#EAF3FA;">${i.endStock}</td>
       </tr>`
     );
     tBody.push(`<tr style="background:#E6F1FB;font-weight:500">
@@ -1295,7 +1332,7 @@ function drawEndingStock(filterItem, year, site, hogi, filterDesc) {
       ${months12.map((_,mi)=>`<td>${itemResults.reduce((a,i)=>a+i.monthlyEnd[mi],0)}</td>`).join('')}
       <td style="color:#1D9E75">${grandIn}</td>
       <td style="color:#D85A30">${grandOut}</td>
-      <td style="color:#185FA5">${grandEnd}</td>
+      <td style="color:#185FA5;font-weight:700;background:#d4e8f8;">${grandEnd}</td>
     </tr>`);
     document.getElementById('an-table').innerHTML = `<thead>${tHead}</thead><tbody>${tBody.join('')}</tbody>`;
   }
