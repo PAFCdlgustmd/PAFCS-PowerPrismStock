@@ -256,6 +256,20 @@ tr:hover td{background:#E6F1FB;}
   .an-table td:first-child, .an-table th:first-child { position: static; min-width: 80px; }
   .an-table td.col-ending, .an-table th.col-ending { position: static; background: #d4e8f8 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+
+/* 기말재고 현황: 모바일에서는 카드형, PC에서는 기존 표 */
+.es-mobile-card { background:#f8fafd; border:0.5px solid #B5D4F4; border-radius:12px; padding:12px; margin-bottom:1.25rem; }
+.es-mobile-row { display:flex; padding:9px 10px; border-bottom:0.5px solid #eee; font-size:13px; align-items:center; }
+.es-mobile-row:last-child { border-bottom:none; }
+.es-month-pick-btn { padding:8px 0; font-size:12px; border-radius:8px; border:0.5px solid #B5D4F4; background:#fff; color:#185FA5; cursor:pointer; }
+.es-month-pick-btn.active { background:#185FA5; color:#fff; border-color:#185FA5; }
+@media (max-width: 700px) {
+  body.es-view-active #es-pc-wrap { display:none; }
+  body.es-view-active #es-mobile-card.show { display:block; }
+}
+@media (min-width: 701px) {
+  .es-mobile-card { display:none !important; }
+}
 </style>
 </head>
 <body>
@@ -572,9 +586,50 @@ tr:hover td{background:#E6F1FB;}
     <!-- 요약 카드 -->
     <div id="an-summary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;"></div>
 
-    <!-- 상세 테이블 -->
-    <div class="an-table-wrap">
+    <!-- 상세 테이블 (PC) -->
+    <div class="an-table-wrap" id="es-pc-wrap">
       <table class="an-table" id="an-table"></table>
+    </div>
+
+    <!-- 기말재고 모바일 카드형 (기말재고 탭 + 좁은 화면일 때만 표시) -->
+    <div class="es-mobile-card hidden" id="es-mobile-card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+        <button onclick="esMoveMonth(-1)" style="width:32px;height:32px;border-radius:8px;border:0.5px solid #B5D4F4;background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;"><i class="ti ti-chevron-left" style="font-size:16px;"></i></button>
+        <button onclick="esToggleMonthPicker()" id="es-month-label" style="flex:1;text-align:center;font-weight:500;font-size:15px;background:#fff;border:0.5px solid #B5D4F4;border-radius:8px;padding:6px 0;display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;color:#185FA5;">1월말 <i class="ti ti-chevron-down" style="font-size:13px;color:#888;"></i></button>
+        <button onclick="esMoveMonth(1)" style="width:32px;height:32px;border-radius:8px;border:0.5px solid #B5D4F4;background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;"><i class="ti ti-chevron-right" style="font-size:16px;"></i></button>
+      </div>
+      <div style="text-align:center;font-size:11px;color:#999;margin-bottom:10px;" id="es-month-progress">1 / 12</div>
+
+      <div id="es-month-picker" class="hidden" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px;"></div>
+
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <div style="flex:1;background:#EAF3DE;border-radius:8px;padding:8px 10px;">
+          <div style="font-size:11px;color:#3B6D11;">이번 달 입고</div>
+          <div style="font-size:17px;font-weight:500;color:#27500A;" id="es-month-in">0개</div>
+        </div>
+        <div style="flex:1;background:#FAECE7;border-radius:8px;padding:8px 10px;">
+          <div style="font-size:11px;color:#712B13;">이번 달 출고</div>
+          <div style="font-size:17px;font-weight:500;color:#4A1B0C;" id="es-month-out">0개</div>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <span style="font-size:12px;color:#555;">출고 많은 품목 순</span>
+        <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:#888;">
+          <input type="checkbox" id="es-show-all" onchange="renderEsMobileCard()" style="width:14px;height:14px;margin:0;"> 변동 없는 품목도 보기
+        </label>
+      </div>
+
+      <div style="background:#fff;border-radius:8px;border:0.5px solid #ddd;">
+        <div style="display:flex;padding:8px 10px;border-bottom:0.5px solid #eee;font-size:11px;color:#888;">
+          <div style="flex:1;">품목</div>
+          <div style="width:44px;text-align:right;color:#3B6D11;">입고</div>
+          <div style="width:44px;text-align:right;color:#A32D2D;">출고</div>
+          <div style="width:48px;text-align:right;color:#185FA5;">재고</div>
+        </div>
+        <div id="es-mobile-rows"></div>
+      </div>
+      <div style="text-align:center;font-size:11px;color:#999;margin-top:8px;" id="es-hidden-count"></div>
     </div>
   </div>
 </div>
@@ -1398,6 +1453,13 @@ function drawEndingStock(filterItem, year, site, hogi, filterDesc) {
     </tr>`);
     document.getElementById('an-table').className = 'an-table es-table';
     document.getElementById('an-table').innerHTML = `<thead>${tHead}</thead><tbody>${tBody.join('')}</tbody>`;
+
+    // 모바일 카드형 데이터 저장 및 렌더
+    esItemResults = itemResults;
+    esMonthIdx = (typeof esMonthIdx === 'number' && esMonthIdx >= 0 && esMonthIdx <= 11) ? esMonthIdx : 0;
+    document.body.classList.add('es-view-active');
+    document.getElementById('es-mobile-card').classList.add('show');
+    renderEsMobileCard();
   }
 }
 
@@ -1458,6 +1520,8 @@ function renderAnalysis(){
   document.getElementById('an-table').innerHTML = '';
   document.getElementById('an-table').className = 'an-table';
   document.getElementById('an-summary').innerHTML = '';
+  document.body.classList.remove('es-view-active');
+  document.getElementById('es-mobile-card').classList.remove('show');
 
   const filterDesc = [site||'전체 현장', hogi?hogi+'호기':'전체 호기', item||'전체 품목', year?year+'년':'전체 연도'].join(' / ');
 
@@ -1637,6 +1701,73 @@ function drawYearlyCompare(outLogs, item, site, filterDesc){
 }
 
 // ── 현장별 막대 ──
+// ── 기말재고 모바일 카드형 ──
+let esItemResults = [];
+let esMonthIdx = 0;
+const ES_MONTH_LABELS = ['1월말','2월말','3월말','4월말','5월말','6월말','7월말','8월말','9월말','10월말','11월말','12월말'];
+
+function esMoveMonth(delta){
+  esMonthIdx = Math.max(0, Math.min(11, esMonthIdx + delta));
+  document.getElementById('es-month-picker').classList.add('hidden');
+  renderEsMobileCard();
+}
+
+function esToggleMonthPicker(){
+  const picker = document.getElementById('es-month-picker');
+  if(picker.classList.contains('hidden')){
+    picker.innerHTML = ES_MONTH_LABELS.map((label,i) =>
+      `<button class="es-month-pick-btn ${i===esMonthIdx?'active':''}" onclick="esJumpMonth(${i})">${label.replace('말','')}</button>`
+    ).join('');
+    picker.classList.remove('hidden');
+  } else {
+    picker.classList.add('hidden');
+  }
+}
+
+function esJumpMonth(idx){
+  esMonthIdx = idx;
+  document.getElementById('es-month-picker').classList.add('hidden');
+  renderEsMobileCard();
+}
+
+function renderEsMobileCard(){
+  if(!esItemResults.length) return;
+  document.getElementById('es-month-label').innerHTML = `${ES_MONTH_LABELS[esMonthIdx]} <i class="ti ti-chevron-down" style="font-size:13px;color:#888;"></i>`;
+  document.getElementById('es-month-progress').textContent = `${esMonthIdx+1} / 12`;
+
+  const showAll = document.getElementById('es-show-all').checked;
+
+  const rows = esItemResults.map(i => ({
+    name: i.name,
+    inQty: i.monthlyIn[esMonthIdx] || 0,
+    outQty: i.monthlyOut[esMonthIdx] || 0,
+    stock: i.monthlyEnd[esMonthIdx]
+  }));
+
+  const monthIn  = rows.reduce((a,r)=>a+r.inQty,0);
+  const monthOut = rows.reduce((a,r)=>a+r.outQty,0);
+  document.getElementById('es-month-in').textContent = monthIn+'개';
+  document.getElementById('es-month-out').textContent = monthOut+'개';
+
+  let visibleRows = rows.filter(r => showAll || r.inQty > 0 || r.outQty > 0);
+  visibleRows.sort((a,b) => b.outQty - a.outQty);
+
+  const hiddenCount = rows.length - visibleRows.length;
+
+  document.getElementById('es-mobile-rows').innerHTML = visibleRows.length
+    ? visibleRows.map(r => `
+      <div class="es-mobile-row">
+        <div style="flex:1;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.name}</div>
+        <div style="width:44px;text-align:right;color:#222;">${r.inQty||'-'}</div>
+        <div style="width:44px;text-align:right;color:#222;">${r.outQty||'-'}</div>
+        <div style="width:48px;text-align:right;color:#185FA5;font-weight:500;">${r.stock}</div>
+      </div>
+    `).join('')
+    : '<div style="text-align:center;padding:1.5rem;color:#888;font-size:13px;">이 달에 변동 있는 품목이 없습니다.</div>';
+
+  document.getElementById('es-hidden-count').textContent = hiddenCount > 0 ? `변동 없는 품목 ${hiddenCount}개 숨김` : '';
+}
+
 function drawSiteBar(outLogs, filterDesc){
   document.getElementById('an-chart-title').textContent = `현장별 출고량 — ${filterDesc}`;
   const map = {};
