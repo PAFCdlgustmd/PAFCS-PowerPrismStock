@@ -101,20 +101,23 @@ tr:hover td{background:#E6F1FB;}
 .an-table th.col-ending{background:#d4e8f8;color:#0C447C;font-weight:700;position:sticky;right:0;z-index:3;border-left:2px solid #B5D4F4;}
 .an-table tr:last-child td.col-ending{background:#c8dfef;}
 
-/* 기말재고 현황 표 - 입/출고 분리 2단 헤더 + 테두리 강화 */
+/* 기말재고 현황 표 - 입/출고/재고 3단 헤더 + 테두리 강화 */
 .an-table.es-table{table-layout:fixed;}
 .an-table.es-table, .an-table.es-table th, .an-table.es-table td{border:0.5px solid #B5D4F4;}
 .an-table.es-table th:first-child, .an-table.es-table td:first-child{width:90px;}
-.an-table.es-table th.sub-in,.an-table.es-table th.sub-out{width:34px;font-size:10px;}
+.an-table.es-table th.sub-in,.an-table.es-table th.sub-out,.an-table.es-table th.sub-stock{width:34px;font-size:10px;}
 .an-table.es-table th.col-total-in,.an-table.es-table th.col-total-out,.an-table.es-table th.col-ending{width:62px;}
 .an-table.es-table th.sub-in{color:#1D9E75;background:#EAF3DE;}
 .an-table.es-table th.sub-out{color:#D85A30;background:#FAECE7;}
+.an-table.es-table th.sub-stock{color:#0C447C;background:#d4e8f8;font-weight:500;}
 .an-table.es-table td.cell-in{color:#222;}
 .an-table.es-table td.cell-out{color:#222;}
+.an-table.es-table td.cell-stock{color:#185FA5;font-weight:500;background:#EAF3FA;}
 .an-table.es-table td.col-total-in{color:#27500A;font-weight:500;background:#EAF3DE;}
 .an-table.es-table td.col-total-out{color:#712B13;font-weight:500;background:#FAECE7;}
 .an-table.es-table th.col-total-in{color:#27500A;background:#d9ebc4;}
 .an-table.es-table th.col-total-out{color:#712B13;background:#f6d9cb;}
+
 
 .bulk-section { margin-top: 20px; border-top: 2px dashed #B5D4F4; padding-top: 20px; }
 .bulk-textarea { width: 100%; height: 100px; padding: 10px; font-size: 12px; border: 1px solid #ccc; border-radius: 8px; font-family: monospace; resize: vertical; outline: none; }
@@ -248,13 +251,23 @@ tr:hover td{background:#E6F1FB;}
 
 /* 프린트 대응 */
 @media print {
+  @page { size: A4 landscape; margin: 8mm; }
   body { background: #fff; padding: 0; }
   .topbar, .cloud-bar, .tabs, .log-tools, .btn-sync { display: none !important; }
   .an-table-wrap { overflow: visible !important; border: 1px solid #ccc; }
-  .an-table { font-size: 10px; width: 100%; }
-  .an-table th, .an-table td { padding: 4px 5px; white-space: normal; }
-  .an-table td:first-child, .an-table th:first-child { position: static; min-width: 80px; }
+  .an-table { font-size: 9px; width: 100%; table-layout: fixed; }
+  .an-table th, .an-table td { padding: 2px 3px; white-space: normal; }
+  .an-table td:first-child, .an-table th:first-child { position: static; min-width: 50px; max-width: 70px; }
   .an-table td.col-ending, .an-table th.col-ending { position: static; background: #d4e8f8 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  /* 기말재고 현황 표(품목×월별 입고/출고/재고): 39열을 가로 1페이지에 압축 */
+  .an-table.es-table { font-size: 7px; }
+  .an-table.es-table th, .an-table.es-table td { padding: 1px 2px; }
+  .an-table.es-table th:first-child, .an-table.es-table td:first-child { min-width: 40px; max-width: 56px; }
+  .an-table.es-table th.sub-in, .an-table.es-table th.sub-out, .an-table.es-table th.sub-stock { width: auto; font-size: 6px; }
+  .an-table.es-table th.col-total-in, .an-table.es-table th.col-total-out, .an-table.es-table th.col-ending { width: auto; }
+  .an-table.es-table td.cell-stock, .an-table.es-table th.sub-stock { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  #es-year-bar { display: none !important; }
 }
 
 /* 기말재고 현황: 모바일에서는 카드형, PC에서는 기존 표 */
@@ -1440,21 +1453,21 @@ function drawEndingStock(filterItem, year, site, hogi, filterDesc) {
       {label:`${targetYear}년 기말재고 합계`, value: grandEnd+'개', color:'#185FA5'},
     ]);
 
-    // 테이블: 품목 × 월별(입고/출고) + 연도별 총입고/총출고/기말재고 열
+    // 테이블: 품목 × 월별(입고/출고/재고) + 연도별 총입고/총출고/기말재고 열
     const tHead = `<tr>
       <th rowspan="2">품목</th>
-      ${months12.map(m=>`<th colspan="2">${parseInt(m)}월말</th>`).join('')}
+      ${months12.map(m=>`<th colspan="3">${parseInt(m)}월말</th>`).join('')}
       <th rowspan="2" class="col-total-in">총입고량</th>
       <th rowspan="2" class="col-total-out">총출고량</th>
       <th rowspan="2" class="col-ending">${targetYear}년<br>기말재고</th>
     </tr>
     <tr>
-      ${months12.map(()=>'<th class="sub-in">입고</th><th class="sub-out">출고</th>').join('')}
+      ${months12.map(()=>'<th class="sub-in">입고</th><th class="sub-out">출고</th><th class="sub-stock">재고</th>').join('')}
     </tr>`;
     const tBody = itemResults.map(i =>
       `<tr>
         <td style="font-weight:500">${i.name}</td>
-        ${i.monthlyIn.map((v,mi)=>`<td class="cell-in">${v||'-'}</td><td class="cell-out">${i.monthlyOut[mi]||'-'}</td>`).join('')}
+        ${i.monthlyIn.map((v,mi)=>`<td class="cell-in">${v||'-'}</td><td class="cell-out">${i.monthlyOut[mi]||'-'}</td><td class="cell-stock">${i.monthlyEnd[mi]}</td>`).join('')}
         <td class="col-total-in">${i.totalIn}</td>
         <td class="col-total-out">${i.totalOut}</td>
         <td class="col-ending">${i.endStock}</td>
@@ -1462,7 +1475,7 @@ function drawEndingStock(filterItem, year, site, hogi, filterDesc) {
     );
     tBody.push(`<tr style="background:#E6F1FB;font-weight:500">
       <td>합계</td>
-      ${months12.map((_,mi)=>`<td class="cell-in">${itemResults.reduce((a,i)=>a+i.monthlyIn[mi],0)||'-'}</td><td class="cell-out">${itemResults.reduce((a,i)=>a+i.monthlyOut[mi],0)||'-'}</td>`).join('')}
+      ${months12.map((_,mi)=>`<td class="cell-in">${itemResults.reduce((a,i)=>a+i.monthlyIn[mi],0)||'-'}</td><td class="cell-out">${itemResults.reduce((a,i)=>a+i.monthlyOut[mi],0)||'-'}</td><td class="cell-stock">${itemResults.reduce((a,i)=>a+i.monthlyEnd[mi],0)}</td>`).join('')}
       <td class="col-total-in">${grandIn}</td>
       <td class="col-total-out">${grandOut}</td>
       <td class="col-ending">${grandEnd}</td>
