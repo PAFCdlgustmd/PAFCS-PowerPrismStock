@@ -105,12 +105,13 @@ tr:hover td{background:#E6F1FB;}
 .an-table th.col-ending{background:#d4e8f8;color:#0C447C;font-weight:700;position:sticky;right:0;z-index:3;border-left:2px solid #B5D4F4;}
 .an-table tr:last-child td.col-ending{background:#c8dfef;}
 
-/* 기말재고 현황 표 - 입/출고/재고 3단 헤더 + 테두리 강화 */
-.an-table.es-table{table-layout:auto;width:100%;}
+/* 기말재고 현황 표 - 입/출고/재고 3단 헤더, 스크롤 없이 한 화면에 12개월+합계까지 표시 */
+.an-table.es-table{table-layout:fixed;width:100%;font-size:clamp(8px,0.7vw,11px);font-variant-numeric:tabular-nums;}
 .an-table.es-table, .an-table.es-table th, .an-table.es-table td{border:0.5px solid #B5D4F4;}
-.an-table.es-table th:first-child, .an-table.es-table td:first-child{min-width:110px;max-width:none;}
-.an-table.es-table th.sub-in,.an-table.es-table th.sub-out,.an-table.es-table th.sub-stock{min-width:54px;font-size:11px;}
-.an-table.es-table th.col-total-in,.an-table.es-table th.col-total-out,.an-table.es-table th.col-ending{min-width:82px;}
+.an-table.es-table th,.an-table.es-table td{padding:4px 0;white-space:nowrap;overflow:visible;text-align:center;}
+.an-table.es-table th:first-child, .an-table.es-table td:first-child{width:7%;max-width:none;font-size:clamp(8px,0.76vw,12px);padding:4px 2px;text-align:left;overflow:hidden;text-overflow:ellipsis;}
+.an-table.es-table th.sub-in,.an-table.es-table th.sub-out,.an-table.es-table th.sub-stock{width:2.2%;}
+.an-table.es-table th.col-total-in,.an-table.es-table th.col-total-out,.an-table.es-table th.col-ending{width:3.3%;}
 .an-table.es-table th.sub-in{color:#1D9E75;background:#EAF3DE;}
 .an-table.es-table th.sub-out{color:#D85A30;background:#FAECE7;}
 .an-table.es-table th.sub-stock{color:#0C447C;background:#d4e8f8;font-weight:500;}
@@ -121,6 +122,8 @@ tr:hover td{background:#E6F1FB;}
 .an-table.es-table td.col-total-out{color:#712B13;font-weight:500;background:#FAECE7;}
 .an-table.es-table th.col-total-in{color:#27500A;background:#d9ebc4;}
 .an-table.es-table th.col-total-out{color:#712B13;background:#f6d9cb;}
+/* es-table은 화면 폭이 좁아도 줄바꿈/잘림 없이 한 화면에 모두 들어가야 하므로 가로 스크롤 래퍼를 무력화 */
+.an-table-wrap.es-no-scroll{overflow-x:visible;}
 
 
 .bulk-section { margin-top: 20px; border-top: 2px dashed #B5D4F4; padding-top: 20px; }
@@ -264,12 +267,12 @@ tr:hover td{background:#E6F1FB;}
   .an-table td:first-child, .an-table th:first-child { position: static; min-width: 50px; max-width: 70px; }
   .an-table td.col-ending, .an-table th.col-ending { position: static; background: #d4e8f8 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
-  /* 기말재고 현황 표(품목×월별 입고/출고/재고): 39열을 가로 1페이지에 압축 */
-  .an-table.es-table { font-size: 7px; }
-  .an-table.es-table th, .an-table.es-table td { padding: 1px 2px; }
-  .an-table.es-table th:first-child, .an-table.es-table td:first-child { min-width: 40px; max-width: 56px; }
-  .an-table.es-table th.sub-in, .an-table.es-table th.sub-out, .an-table.es-table th.sub-stock { width: auto; font-size: 6px; }
-  .an-table.es-table th.col-total-in, .an-table.es-table th.col-total-out, .an-table.es-table th.col-ending { width: auto; }
+  /* 기말재고 현황 표(품목×월별 입고/출고/재고, 총 40열): 가로 1페이지에 잘림 없이 압축 */
+  .an-table.es-table { font-size: 6.5px; table-layout: fixed; width: 100%; }
+  .an-table.es-table th, .an-table.es-table td { padding: 1px 1px; white-space: nowrap; }
+  .an-table.es-table th:first-child, .an-table.es-table td:first-child { position: static; width: 7%; max-width: none; font-size: 7px; }
+  .an-table.es-table th.sub-in, .an-table.es-table th.sub-out, .an-table.es-table th.sub-stock { width: 2.2%; }
+  .an-table.es-table th.col-total-in, .an-table.es-table th.col-total-out, .an-table.es-table th.col-ending { width: 3.3%; font-size: 7px; }
   .an-table.es-table td.cell-stock, .an-table.es-table th.sub-stock { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   #es-year-bar { display: none !important; }
 }
@@ -1486,6 +1489,7 @@ function drawEndingStock(filterItem, year, site, hogi, filterDesc) {
     </tr>`);
     document.getElementById('an-table').className = 'an-table es-table';
     document.getElementById('an-table').innerHTML = `<thead>${tHead}</thead><tbody>${tBody.join('')}</tbody>`;
+    document.getElementById('es-pc-wrap').classList.add('es-no-scroll');
 
     // 모바일 카드형 데이터 저장 및 렌더
     esItemResults = itemResults;
@@ -1561,6 +1565,7 @@ function renderAnalysis(){
   document.body.classList.remove('es-view-active');
   document.getElementById('es-mobile-card').classList.remove('show');
   document.getElementById('es-year-bar').style.display = 'none';
+  document.getElementById('es-pc-wrap').classList.remove('es-no-scroll');
 
   const filterDesc = [site||'전체 현장', hogi?hogi+'호기':'전체 호기', item||'전체 품목', year?year+'년':'전체 연도'].join(' / ');
 
