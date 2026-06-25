@@ -4,7 +4,7 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PAFC 재고 관리 (클라우드 실시간 연동)</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>%F0%9F%90%B9</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📦</text></svg>">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
@@ -613,7 +613,8 @@ const BASE = [
 ];
 const CATEGORY_ORDER = ["수처리 계통","촉매 계통","에어필터 계통","정기점검 계통"];
 function categoryOf(name){
-  const b = BASE.find(b=>b.name===name);
+  const norm = n => n.replace(/O/g, '0');
+  const b = BASE.find(b => norm(b.name) === norm(name));
   return b && b.category ? b.category : "기타";
 }
 
@@ -691,7 +692,8 @@ async function loadFromCloud() {
     if(data.writers) writers = data.writers;
     if(data.items && data.items.length > 0) {
       inv = data.items.map(name => {
-        const base = BASE.find(b => b.name === name);
+        const norm = n => n.replace(/O/g, '0');
+        const base = BASE.find(b => norm(b.name) === norm(name));
         return { name, current: 0, warnAt: base ? base.warnAt : 20, dangerAt: base ? base.dangerAt : 5, alwaysOk: base ? (base.alwaysOk||false) : false };
       });
     }
