@@ -605,12 +605,13 @@ tr:hover td{background:#E6F1FB;}
     </div>
 
     <!-- 요약 카드 -->
-    <div id="an-summary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;"></div>
+    <div id="an-summary" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;"></div>
 
-    <!-- 기말재고 현황 전용 연도 선택 바 (기말재고 뷰일 때만 표시) -->
+    <!-- 기말재고 현황 전용 연도 탭 바 (기말재고 뷰일 때만 표시) -->
     <div id="es-year-bar" style="display:none;align-items:center;justify-content:space-between;background:#E6F1FB;border-radius:10px;padding:10px 14px;margin-bottom:10px;">
       <span style="font-size:13px;font-weight:500;color:#185FA5;">📦 기말재고 현황</span>
-      <select id="es-year-select" onchange="esYearChanged(this.value)" style="font-size:14px;font-weight:500;color:#0C447C;border:0.5px solid #B5D4F4;border-radius:8px;padding:6px 10px;background:#fff;outline:none;"></select>
+      <div id="es-year-tabs" style="display:flex;gap:4px;"></div>
+      <select id="es-year-select" onchange="esYearChanged(this.value)" style="display:none;"></select>
     </div>
 
     <!-- 상세 테이블 (PC) -->
@@ -1317,19 +1318,20 @@ function drawEndingStock(filterItem, year, site, hogi, filterDesc) {
   const targetYear = year || new Date().getFullYear().toString();
   document.getElementById('an-chart-title').textContent = `기말재고 현황 — ${targetYear}년 월별 입출고 · 기말재고`;
 
-  // 기말재고 전용 연도 선택 바 표시 + 채우기
+  // 연도 탭 버튼 렌더링
   const esYearBar = document.getElementById('es-year-bar');
-  const esYearSel = document.getElementById('es-year-select');
+  const esYearTabs = document.getElementById('es-year-tabs');
   esYearBar.style.display = 'flex';
   const baseYears = new Set(['2024','2025','2026','2027']);
   logs.forEach(l=>{ if(l.date && /^\d{4}$/.test(l.date.slice(0,4))) baseYears.add(l.date.slice(0,4)); });
-  const esYears = Array.from(baseYears).filter(y=>/^\d{4}$/.test(y)).sort((a,b)=>b-a);
-  esYearSel.innerHTML = esYears.map(y=>`<option value="${y}">${y}년</option>`).join('');
-  esYearSel.value = targetYear;
+  const esYears = Array.from(baseYears).filter(y=>/^\d{4}$/.test(y)).sort((a,b)=>a-b);
+  esYearTabs.innerHTML = esYears.map(y=>`
+    <button onclick="esYearChanged('${y}')"
+      style="padding:5px 14px;border-radius:7px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid ${y===targetYear?'#185FA5':'#B5D4F4'};background:${y===targetYear?'#185FA5':'#fff'};color:${y===targetYear?'#fff':'#185FA5'};transition:none;">
+      ${y}년
+    </button>`).join('');
 
   const months12 = ['01','02','03','04','05','06','07','08','09','10','11','12'];
-
-  // 분석 대상 품목 결정
   const targetItems = filterItem ? [filterItem] : inv.map(i => i.name);
 
   // 해당 연도 이전까지의 누적 재고 (기초재고) 계산
@@ -1345,9 +1347,10 @@ function drawEndingStock(filterItem, year, site, hogi, filterDesc) {
     return inTotal - outTotal;
   }
 
-  // 단일 품목 선택 시: 월별 상세 (입고/출고/기말재고 라인차트)
+  // 단일 품목 선택 시
   if(filterItem) {
-    let runningStock = calcBaseStock(filterItem);
+    const baseStock = calcBaseStock(filterItem);
+    let runningStock = baseStock;
     const monthlyIn  = [];
     const monthlyOut = [];
     const monthlyEnd = [];
@@ -1392,29 +1395,31 @@ function drawEndingStock(filterItem, year, site, hogi, filterDesc) {
     const totalOut = monthlyOut.reduce((a,v)=>a+v,0);
     const endStock = monthlyEnd[11];
     renderSummaryCards([
+      {label:`전년도 기초재고`, value: baseStock+'개', color:'#3B6D11'},
       {label:`${targetYear}년 총 입고`, value: totalIn+'개',  color:'#1D9E75'},
       {label:`${targetYear}년 총 출고`, value: totalOut+'개', color:'#D85A30'},
       {label:`${targetYear}년 기말재고`, value: endStock+'개', color:'#185FA5'},
     ]);
 
-    // 테이블: 월별 입고 / 출고 / 기말재고
     const tHead = `<tr>
       <th>구분</th>
+      <th style="background:#EAF3DE;color:#27500A;">전년도<br>기초재고</th>
       ${months12.map(m=>`<th>${parseInt(m)}월</th>`).join('')}
-      <th>합계/최종</th>
+      <th>총입고</th><th>총출고</th><th class="col-ending">기말재고</th>
     </tr>`;
     const tBody = [
-      `<tr><td style="font-weight:500;color:#1D9E75">입고</td>${monthlyIn.map(v=>`<td>${v||'-'}</td>`).join('')}<td style="font-weight:500;color:#1D9E75">${totalIn}</td></tr>`,
-      `<tr><td style="font-weight:500;color:#D85A30">출고</td>${monthlyOut.map(v=>`<td>${v||'-'}</td>`).join('')}<td style="font-weight:500;color:#D85A30">${totalOut}</td></tr>`,
-      `<tr style="background:#E6F1FB"><td style="font-weight:500;color:#185FA5">기말재고</td>${monthlyEnd.map(v=>`<td style="font-weight:500">${v}</td>`).join('')}<td style="font-weight:500;color:#185FA5">${endStock}</td></tr>`,
+      `<tr><td style="font-weight:500;color:#1D9E75">입고</td><td style="background:#EAF3DE;color:#27500A;font-weight:500;">-</td>${monthlyIn.map(v=>`<td>${v||'-'}</td>`).join('')}<td style="color:#1D9E75;font-weight:500;">${totalIn}</td><td>-</td><td class="col-ending" style="font-weight:400;color:#185FA5;">-</td></tr>`,
+      `<tr><td style="font-weight:500;color:#D85A30">출고</td><td style="background:#EAF3DE;color:#27500A;font-weight:500;">-</td>${monthlyOut.map(v=>`<td>${v||'-'}</td>`).join('')}<td>-</td><td style="color:#D85A30;font-weight:500;">${totalOut}</td><td class="col-ending" style="font-weight:400;color:#185FA5;">-</td></tr>`,
+      `<tr style="background:#E6F1FB"><td style="font-weight:500;color:#185FA5">재고</td><td style="background:#EAF3DE;color:#27500A;font-weight:700;">${baseStock}</td>${monthlyEnd.map(v=>`<td style="font-weight:500;color:#185FA5;">${v}</td>`).join('')}<td style="color:#1D9E75;font-weight:500;">${totalIn}</td><td style="color:#D85A30;font-weight:500;">${totalOut}</td><td class="col-ending">${endStock}</td></tr>`,
     ];
     document.getElementById('an-table').className = 'an-table es-table';
     document.getElementById('an-table').innerHTML = `<thead>${tHead}</thead><tbody>${tBody.join('')}</tbody>`;
 
   } else {
-    // 전체 품목: 품목별 기말재고 막대 차트 + 테이블
+    // 전체 품목
     const itemResults = targetItems.map(itemName => {
-      let runningStock = calcBaseStock(itemName);
+      const baseStock = calcBaseStock(itemName);
+      let runningStock = baseStock;
       const monthlyEnd = [];
       const monthlyIn  = [];
       const monthlyOut = [];
@@ -1430,7 +1435,7 @@ function drawEndingStock(filterItem, year, site, hogi, filterDesc) {
       });
       const totalIn  = monthlyIn.reduce((a,v)=>a+v,0);
       const totalOut = monthlyOut.reduce((a,v)=>a+v,0);
-      return { name: itemName, monthlyEnd, monthlyIn, monthlyOut, totalIn, totalOut, endStock: monthlyEnd[11] };
+      return { name: itemName, baseStock, monthlyEnd, monthlyIn, monthlyOut, totalIn, totalOut, endStock: monthlyEnd[11] };
     });
 
     const ctx = document.getElementById('an-chart').getContext('2d');
@@ -1452,19 +1457,22 @@ function drawEndingStock(filterItem, year, site, hogi, filterDesc) {
       }
     });
 
-    const grandIn  = itemResults.reduce((a,i)=>a+i.totalIn,0);
-    const grandOut = itemResults.reduce((a,i)=>a+i.totalOut,0);
-    const grandEnd = itemResults.reduce((a,i)=>a+i.endStock,0);
+    const grandBase = itemResults.reduce((a,i)=>a+i.baseStock,0);
+    const grandIn   = itemResults.reduce((a,i)=>a+i.totalIn,0);
+    const grandOut  = itemResults.reduce((a,i)=>a+i.totalOut,0);
+    const grandEnd  = itemResults.reduce((a,i)=>a+i.endStock,0);
     renderSummaryCards([
+      {label:'전년도 기초재고 합계', value: grandBase+'개', color:'#3B6D11'},
       {label:`${targetYear}년 총 입고`, value: grandIn+'개',  color:'#1D9E75'},
       {label:`${targetYear}년 총 출고`, value: grandOut+'개', color:'#D85A30'},
       {label:`${targetYear}년 기말재고 합계`, value: grandEnd+'개', color:'#185FA5'},
     ]);
 
-    // 테이블: 품목 × 월별(입고/출고/재고) + 연도별 총입고/총출고/기말재고 열
+    // 테이블: 품목 | 기초재고 | 1~12월(입고/출고/재고) | 총입고 | 총출고 | 기말재고
     const tHead = `<tr>
-      <th rowspan="2">품목</th>
-      ${months12.map(m=>`<th colspan="3">${parseInt(m)}월말</th>`).join('')}
+      <th rowspan="2" style="position:sticky;left:0;z-index:3;background:#E6F1FB;min-width:80px;">품목</th>
+      <th rowspan="2" style="background:#EAF3DE;color:#27500A;white-space:nowrap;">전년도<br>기초재고</th>
+      ${months12.map(m=>`<th colspan="3" style="background:#E6F1FB;color:#0C447C;">${parseInt(m)}월</th>`).join('')}
       <th rowspan="2" class="col-total-in">총입고량</th>
       <th rowspan="2" class="col-total-out">총출고량</th>
       <th rowspan="2" class="col-ending">${targetYear}년<br>기말재고</th>
@@ -1472,27 +1480,31 @@ function drawEndingStock(filterItem, year, site, hogi, filterDesc) {
     <tr>
       ${months12.map(()=>'<th class="sub-in">입고</th><th class="sub-out">출고</th><th class="sub-stock">재고</th>').join('')}
     </tr>`;
+
     const tBody = itemResults.map(i =>
       `<tr>
-        <td style="font-weight:500">${i.name}</td>
+        <td style="font-weight:500;position:sticky;left:0;background:#fff;z-index:1;">${i.name}</td>
+        <td style="background:#EAF3DE;color:#27500A;font-weight:700;text-align:center;">${i.baseStock}</td>
         ${i.monthlyIn.map((v,mi)=>`<td class="cell-in">${v||'-'}</td><td class="cell-out">${i.monthlyOut[mi]||'-'}</td><td class="cell-stock">${i.monthlyEnd[mi]}</td>`).join('')}
         <td class="col-total-in">${i.totalIn}</td>
         <td class="col-total-out">${i.totalOut}</td>
         <td class="col-ending">${i.endStock}</td>
       </tr>`
     );
-    tBody.push(`<tr style="background:#E6F1FB;font-weight:500">
-      <td>합계</td>
+    tBody.push(`<tr style="background:#E6F1FB;font-weight:500;">
+      <td style="position:sticky;left:0;background:#E6F1FB;z-index:1;">합계</td>
+      <td style="background:#C0DD97;color:#27500A;font-weight:700;text-align:center;">${grandBase}</td>
       ${months12.map((_,mi)=>`<td class="cell-in">${itemResults.reduce((a,i)=>a+i.monthlyIn[mi],0)||'-'}</td><td class="cell-out">${itemResults.reduce((a,i)=>a+i.monthlyOut[mi],0)||'-'}</td><td class="cell-stock">${itemResults.reduce((a,i)=>a+i.monthlyEnd[mi],0)}</td>`).join('')}
       <td class="col-total-in">${grandIn}</td>
       <td class="col-total-out">${grandOut}</td>
       <td class="col-ending">${grandEnd}</td>
     </tr>`);
+
     document.getElementById('an-table').className = 'an-table es-table';
     document.getElementById('an-table').innerHTML = `<thead>${tHead}</thead><tbody>${tBody.join('')}</tbody>`;
     document.getElementById('es-pc-wrap').classList.add('es-no-scroll');
 
-    // 모바일 카드형 데이터 저장 및 렌더
+    // 모바일 카드형
     esItemResults = itemResults;
     esMonthIdx = (typeof esMonthIdx === 'number' && esMonthIdx >= 0 && esMonthIdx <= 11) ? esMonthIdx : 0;
     document.body.classList.add('es-view-active');
