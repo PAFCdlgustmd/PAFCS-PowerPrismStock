@@ -1428,8 +1428,8 @@ function drawEndingStock(filterItem, year, site, hogi, filterDesc) {
         monthlyOut.push(outQty);
         monthlyEnd.push(runningStock);
       });
-      const totalIn  = logs.filter(l=>l.item===itemName&&l.type==='in'&&l.date&&l.date.startsWith(targetYear)).reduce((a,l)=>a+l.qty,0);
-      const totalOut = logs.filter(l=>l.item===itemName&&l.type==='out'&&l.date&&l.date.startsWith(targetYear)).reduce((a,l)=>a+l.qty,0);
+      const totalIn  = monthlyIn.reduce((a,v)=>a+v,0);
+      const totalOut = monthlyOut.reduce((a,v)=>a+v,0);
       return { name: itemName, monthlyEnd, monthlyIn, monthlyOut, totalIn, totalOut, endStock: monthlyEnd[11] };
     });
 
