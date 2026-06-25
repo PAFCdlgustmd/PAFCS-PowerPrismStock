@@ -4,7 +4,7 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PAFC 재고 관리 (클라우드 실시간 연동)</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📦</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>%F0%9F%90%B9</text></svg>">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
@@ -44,23 +44,22 @@ tr:hover td{background:#E6F1FB;}
 .b-in{background:#E1F5EE;color:#085041;}
 .b-out{background:#FAECE7;color:#712B13;}
 
-/* 현재 재고 표 - 색상/정렬/테두리 정돈 */
+/* 현재 재고 표 - 글자 크게, 배경색 없이 점+글자색만으로 상태 표시 */
 :root{--c-danger:#A32D2D;--c-warn:#854F0B;--c-ok:#3B6D11;}
-.inv-table{table-layout:auto;}
-.inv-table th{font-size:12px;color:#666;background:#F7F8FA;border-bottom:0.5px solid #ddd;}
+.inv-table{table-layout:auto;font-size:15px;}
+.inv-table th{font-size:13px;color:#666;background:#F7F8FA;border-bottom:0.5px solid #ddd;padding:12px 16px;}
 .inv-table th:not(:first-child){border-left:0.5px solid #eee;}
-.inv-table td{border-left:0.5px solid #eee;white-space:nowrap;}
+.inv-table td{border-left:0.5px solid #eee;white-space:nowrap;padding:13px 16px;border-bottom:0.5px solid #eee;}
 .inv-table td:first-child{border-left:none;}
-.inv-table .inv-name{font-weight:500;text-align:left;}
-.inv-table .inv-num{text-align:right;font-weight:500;}
+.inv-table tr:last-child td{border-bottom:none;}
+.inv-table .inv-name{font-weight:500;font-size:16px;text-align:left;}
+.inv-table .inv-num{text-align:right;font-weight:500;color:#222;}
 .inv-table .inv-muted{font-weight:400;color:#999;}
-.inv-table .inv-stock{font-weight:600;}
-.inv-table .inv-status{text-align:center;}
-.inv-table .status-ok{display:inline-block;min-width:44px;font-size:12px;font-weight:500;color:var(--c-ok);}
-.inv-table .badge{min-width:44px;}
-.inv-table tr.row-danger td{background:#FCEBEB;}
-.inv-table tr.row-warn td{background:#FAEEDA;}
-.inv-table tr.row-alt td{background:#FAFAFA;}
+.inv-table .inv-stock{font-weight:600;font-size:18px;}
+.inv-table .inv-status{text-align:center;font-weight:500;font-size:14px;}
+.inv-table .st-danger{color:var(--c-danger);}
+.inv-table .st-warn{color:var(--c-warn);}
+.inv-table .st-ok{color:var(--c-ok);}
 .inv-table tr:hover td{background:#E6F1FB;}
 
 .sec-title{font-size:13px;font-weight:500;color:#185FA5;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
@@ -830,17 +829,17 @@ function renderInv(){
   const order = { danger: 0, warn: 1, ok: 2 };
   computedInv.sort((a,b) => order[a.statusKey] - order[b.statusKey]);
 
-  const rowClass = { danger: 'row-danger', warn: 'row-warn', ok: '' };
-  const statusHtml = { danger: '<span class="badge b-danger">부족</span>', warn: '<span class="badge b-warn">주의</span>', ok: '<span class="status-ok">정상</span>' };
-  const stockColor = { danger: 'color:var(--c-danger)', warn: 'color:var(--c-warn)', ok: '' };
+  const statusClass = { danger: 'st-danger', warn: 'st-warn', ok: 'st-ok' };
+  const statusText = { danger: '● 부족', warn: '● 주의', ok: '● 정상' };
+  const stockColorClass = { danger: 'st-danger', warn: 'st-warn', ok: '' };
 
-  document.getElementById('inventory-tbody').innerHTML = computedInv.map((i,idx)=>`
-    <tr class="${rowClass[i.statusKey]}${i.statusKey==='ok' && idx%2===1 ? ' row-alt' : ''}">
+  document.getElementById('inventory-tbody').innerHTML = computedInv.map((i)=>`
+    <tr>
       <td class="inv-name">${i.name}</td>
-      <td class="inv-num inv-stock" style="${stockColor[i.statusKey]}">${i.current}</td>
+      <td class="inv-num inv-stock ${stockColorClass[i.statusKey]}">${i.current}</td>
       <td class="inv-num">${i.yearIn}</td>
       <td class="inv-num inv-muted">${i.yearOut}</td>
-      <td class="inv-status">${statusHtml[i.statusKey]}</td>
+      <td class="inv-status ${statusClass[i.statusKey]}">${statusText[i.statusKey]}</td>
     </tr>
   `).join('');
   
