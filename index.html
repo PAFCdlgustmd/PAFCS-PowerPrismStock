@@ -112,6 +112,7 @@ tr:hover td{background:#E6F1FB;}
 .an-table.es-table th,.an-table.es-table td{padding:4px 0;white-space:nowrap;overflow:visible;text-align:center;}
 .an-table.es-table thead tr:first-child th{text-align:center !important;}
 .an-table.es-table th:first-child, .an-table.es-table td:first-child{width:7%;max-width:none;font-size:clamp(8px,0.76vw,12px);padding:4px 2px;text-align:left;overflow:hidden;text-overflow:ellipsis;}
+.an-table.es-table th.es-month-th{text-align:center !important;background:#E6F1FB !important;color:#0C447C !important;}
 .an-table.es-table th.sub-in,.an-table.es-table th.sub-out,.an-table.es-table th.sub-stock{width:2.2%;}
 .an-table.es-table th.col-total-in,.an-table.es-table th.col-total-out,.an-table.es-table th.col-ending{width:3.3%;}
 .an-table.es-table th.sub-in{color:#1D9E75;background:#EAF3DE;}
@@ -1473,7 +1474,7 @@ function drawEndingStock(filterItem, year, site, hogi, filterDesc) {
     const tHead = `<tr>
       <th rowspan="2" style="position:sticky;left:0;z-index:3;background:#E6F1FB;min-width:80px;">품목</th>
       <th rowspan="2" style="background:#EAF3DE;color:#27500A;white-space:nowrap;">전년도<br>기초재고</th>
-      ${months12.map(m=>`<th colspan="3" style="background:#E6F1FB;color:#0C447C;text-align:center;">${parseInt(m)}월</th>`).join('')}
+      ${months12.map(m=>`<th colspan="3" class="es-month-th">${parseInt(m)}월</th>`).join('')}
       <th rowspan="2" class="col-total-in">총입고량</th>
       <th rowspan="2" class="col-total-out">총출고량</th>
       <th rowspan="2" class="col-ending">${targetYear}년<br>기말재고</th>
