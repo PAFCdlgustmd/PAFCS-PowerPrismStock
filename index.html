@@ -60,6 +60,9 @@ tr:hover td{background:#E6F1FB;}
 .inv-table .st-danger{color:var(--c-danger);}
 .inv-table .st-warn{color:var(--c-warn);}
 .inv-table .st-ok{color:var(--c-ok);}
+.inv-table tr.inv-cat-row td{background:#E6F1FB;color:#185FA5;font-weight:500;font-size:13px;padding:8px 16px;border-left:none;}
+.inv-table tr.inv-cat-row:hover td{background:#E6F1FB;}
+.inv-table tr:not(.inv-cat-row) .inv-name{padding-left:28px;}
 .inv-table tr:hover td{background:#E6F1FB;}
 
 .sec-title{font-size:13px;font-weight:500;color:#185FA5;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
@@ -584,30 +587,35 @@ tr:hover td{background:#E6F1FB;}
 const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw7z4yVAkV7S_AhmdHc3eAc0XjklyB_kxbZSyY4CgNIsIHslYkIwc96L9IRJUO0ilJa/exec";
 
 const BASE = [
-  {name:"레진(후지전기)",              initial:0, warnAt:60,  dangerAt:48},
-  {name:"레진(삼양사)",                initial:0, warnAt:48,  dangerAt:16},
-  {name:"물필터",                      initial:0, warnAt:20,  dangerAt:16},
-  {name:"레진헤드",                    initial:0, warnAt:10,  dangerAt:5},
-  {name:"집수봉",                      initial:0, warnAt:5,   dangerAt:2},
-  {name:"활성탄필터",                  initial:0, warnAt:19,  dangerAt:10},
-  {name:"마이크로필터",                initial:0, warnAt:19,  dangerAt:10},
-  {name:"인버터필터",                  initial:0, warnAt:19,  dangerAt:10},
-  {name:"개질기필터",                  initial:0, warnAt:19,  dangerAt:10},
-  {name:"GS-23",                       initial:0, warnAt:300, dangerAt:200},
-  {name:"GS-6",                        initial:0, warnAt:100, dangerAt:70},
-  {name:"방열팬",                      initial:0, warnAt:10,  dangerAt:5},
-  {name:"안전밸브(SV-960)",            initial:0, warnAt:0,   dangerAt:0,  alwaysOk:true},
-  {name:"안전밸브(SV-530)",            initial:0, warnAt:0,   dangerAt:0,  alwaysOk:true},
-  {name:"F-07 오프가스필터",           initial:0, warnAt:0,   dangerAt:0,  alwaysOk:true},
-  {name:"F-07 필터(설치용 O링)",       initial:0, warnAt:0,   dangerAt:0,  alwaysOk:true},
-  {name:"DCCT 냉각팬",                 initial:0, warnAt:0,   dangerAt:0,  alwaysOk:true},
-  {name:"IV 유닛 냉각팬",              initial:0, warnAt:0,   dangerAt:0,  alwaysOk:true},
-  {name:"UPS 배터리",                  initial:0, warnAt:10,  dangerAt:5},
-  {name:"E-12열교환기",                initial:0, warnAt:0,   dangerAt:0,  alwaysOk:true},
-  {name:"FAN-02(인버터 필터 상부 FAN)",initial:0, warnAt:0,   dangerAt:0,  alwaysOk:true},
-  {name:"AI 모듈 (TC)",                initial:0, warnAt:0,   dangerAt:0,  alwaysOk:true},
-  {name:"AI 모듈 (PT)",                initial:0, warnAt:0,   dangerAt:0,  alwaysOk:true},
+  {name:"레진(후지전기)",              initial:0, warnAt:60,  dangerAt:48, category:"수처리 계통"},
+  {name:"레진(삼양사)",                initial:0, warnAt:48,  dangerAt:16, category:"수처리 계통"},
+  {name:"물필터",                      initial:0, warnAt:20,  dangerAt:16, category:"수처리 계통"},
+  {name:"활성탄필터",                  initial:0, warnAt:19,  dangerAt:10, category:"수처리 계통"},
+  {name:"레진헤드",                    initial:0, warnAt:10,  dangerAt:5,  category:"수처리 계통"},
+  {name:"집수봉",                      initial:0, warnAt:5,   dangerAt:2,  category:"수처리 계통"},
+  {name:"GS-23",                       initial:0, warnAt:300, dangerAt:200, category:"촉매 계통"},
+  {name:"GS-6",                        initial:0, warnAt:100, dangerAt:70,  category:"촉매 계통"},
+  {name:"인버터필터",                  initial:0, warnAt:19,  dangerAt:10, category:"에어필터 계통"},
+  {name:"개질기필터",                  initial:0, warnAt:19,  dangerAt:10, category:"에어필터 계통"},
+  {name:"마이크로필터",                initial:0, warnAt:19,  dangerAt:10, category:"에어필터 계통"},
+  {name:"UPS 배터리",                  initial:0, warnAt:10,  dangerAt:5,  category:"정기점검 계통"},
+  {name:"방열팬",                      initial:0, warnAt:10,  dangerAt:5,  category:"정기점검 계통"},
+  {name:"F-07 오프가스필터",           initial:0, warnAt:0,   dangerAt:0,  alwaysOk:true, category:"정기점검 계통"},
+  {name:"F-07 필터(설치용 O링)",       initial:0, warnAt:0,   dangerAt:0,  alwaysOk:true, category:"정기점검 계통"},
+  {name:"DCCT 냉각팬",                 initial:0, warnAt:0,   dangerAt:0,  alwaysOk:true, category:"정기점검 계통"},
+  {name:"IV 유닛 냉각팬",              initial:0, warnAt:0,   dangerAt:0,  alwaysOk:true, category:"정기점검 계통"},
+  {name:"E-12열교환기",                initial:0, warnAt:0,   dangerAt:0,  alwaysOk:true, category:"정기점검 계통"},
+  {name:"안전밸브(SV-960)",            initial:0, warnAt:0,   dangerAt:0,  alwaysOk:true, category:"정기점검 계통"},
+  {name:"안전밸브(SV-530)",            initial:0, warnAt:0,   dangerAt:0,  alwaysOk:true, category:"정기점검 계통"},
+  {name:"FAN-02(인버터 필터 상부 FAN)",initial:0, warnAt:0,   dangerAt:0,  alwaysOk:true, category:"정기점검 계통"},
+  {name:"AI 모듈 (TC)",                initial:0, warnAt:0,   dangerAt:0,  alwaysOk:true, category:"정기점검 계통"},
+  {name:"AI 모듈 (PT)",                initial:0, warnAt:0,   dangerAt:0,  alwaysOk:true, category:"정기점검 계통"},
 ];
+const CATEGORY_ORDER = ["수처리 계통","촉매 계통","에어필터 계통","정기점검 계통"];
+function categoryOf(name){
+  const b = BASE.find(b=>b.name===name);
+  return b && b.category ? b.category : "기타";
+}
 
 const DEFAULT_SITES = [
   "아쿠아시티", "그린파크", "유일산업", "한사랑사우나", "선비사우나",
@@ -823,24 +831,30 @@ function renderInv(){
     const yearOut = logs.filter(l => l.item === item.name && l.type === 'out' && l.date.startsWith(selectedYear)).reduce((a,l)=>a+l.qty, 0);
     const key = statusKey(item.current, item.warnAt, item.dangerAt, item.alwaysOk);
 
-    return { name: item.name, current: item.current, yearIn: yearIn, yearOut: yearOut, statusKey: key };
+    return { name: item.name, current: item.current, yearIn: yearIn, yearOut: yearOut, statusKey: key, category: categoryOf(item.name) };
   });
-
-  const order = { danger: 0, warn: 1, ok: 2 };
-  computedInv.sort((a,b) => order[a.statusKey] - order[b.statusKey]);
 
   const statusClass = { danger: 'st-danger', warn: 'st-warn', ok: 'st-ok' };
   const statusText = { danger: '● 부족', warn: '● 주의', ok: '● 정상' };
   const stockColorClass = { danger: 'st-danger', warn: 'st-warn', ok: '' };
 
-  document.getElementById('inventory-tbody').innerHTML = computedInv.map((i)=>`
-    <tr>
-      <td class="inv-name">${i.name}</td>
-      <td class="inv-num inv-stock ${stockColorClass[i.statusKey]}">${i.current}</td>
-      <td class="inv-num">${i.yearIn}</td>
-      <td class="inv-num inv-muted">${i.yearOut}</td>
-      <td class="inv-status ${statusClass[i.statusKey]}">${statusText[i.statusKey]}</td>
-    </tr>
+  // 계통(카테고리) 순서대로 그룹화하되, 각 그룹 안에서는 원래 등록 순서를 유지
+  const groups = [...CATEGORY_ORDER, "기타"].map(cat => ({
+    category: cat,
+    items: computedInv.filter(i => i.category === cat)
+  })).filter(g => g.items.length > 0);
+
+  document.getElementById('inventory-tbody').innerHTML = groups.map(g => `
+    <tr class="inv-cat-row"><td colspan="5">${g.category}</td></tr>
+    ${g.items.map(i=>`
+      <tr>
+        <td class="inv-name">${i.name}</td>
+        <td class="inv-num inv-stock ${stockColorClass[i.statusKey]}">${i.current}</td>
+        <td class="inv-num">${i.yearIn}</td>
+        <td class="inv-num inv-muted">${i.yearOut}</td>
+        <td class="inv-status ${statusClass[i.statusKey]}">${statusText[i.statusKey]}</td>
+      </tr>
+    `).join('')}
   `).join('');
   
   renderStats();
