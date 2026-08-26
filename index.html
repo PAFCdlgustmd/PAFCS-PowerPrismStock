@@ -110,9 +110,17 @@ tr:hover td{background:#E6F1FB;}
 .multi-chip .mc-x:hover{color:#A32D2D;}
 .multi-panel{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1px solid #B5D4F4;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,0.15);max-height:220px;overflow-y:auto;z-index:30;display:none;}
 .multi-panel.show{display:block;}
-.multi-opt{display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:13px;cursor:pointer;}
+.multi-opt{display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:13px;cursor:pointer;justify-content:space-between;}
 .multi-opt:hover{background:#E6F1FB;}
-.multi-opt input{width:15px;height:15px;accent-color:#185FA5;flex-shrink:0;}
+.multi-opt .opt-label{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.multi-opt input{width:16px;height:16px;accent-color:#185FA5;flex-shrink:0;margin-left:10px;}
+
+/* 호기 선택: 좌측 이름 - 우측 체크박스, 여백 최소화된 그리드 배치 */
+.hogi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:2px 4px;padding:8px 10px;}
+.hogi-opt{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:7px 10px;font-size:13px;cursor:pointer;border-radius:6px;}
+.hogi-opt:hover{background:#E6F1FB;}
+.hogi-opt input{width:16px;height:16px;accent-color:#185FA5;flex-shrink:0;}
+
 .hogi-add-row{display:flex;gap:6px;padding:8px;border-top:1px solid #eee;position:sticky;bottom:0;background:#fff;}
 .hogi-add-row input{flex:1;font-size:12px;padding:6px 8px;border:1px solid #ccc;border-radius:6px;outline:none;}
 .hogi-add-row button{background:#185FA5;color:#fff;border:none;border-radius:6px;padding:6px 10px;font-size:12px;cursor:pointer;white-space:nowrap;}
@@ -616,16 +624,18 @@ tr:hover td{background:#E6F1FB;}
             <span class="multi-placeholder">호기 선택 (다중 가능, 없으면 비워두세요)</span>
           </div>
           <div class="multi-panel" id="io-hogi-panel">
-            <label class="multi-opt"><input type="checkbox" value="1" onchange="updateHogiChips()"> 1호기</label>
-            <label class="multi-opt"><input type="checkbox" value="2" onchange="updateHogiChips()"> 2호기</label>
-            <label class="multi-opt"><input type="checkbox" value="3" onchange="updateHogiChips()"> 3호기</label>
-            <label class="multi-opt"><input type="checkbox" value="4" onchange="updateHogiChips()"> 4호기</label>
-            <label class="multi-opt"><input type="checkbox" value="5" onchange="updateHogiChips()"> 5호기</label>
-            <label class="multi-opt"><input type="checkbox" value="6" onchange="updateHogiChips()"> 6호기</label>
-            <label class="multi-opt"><input type="checkbox" value="7" onchange="updateHogiChips()"> 7호기</label>
-            <label class="multi-opt"><input type="checkbox" value="8" onchange="updateHogiChips()"> 8호기</label>
-            <label class="multi-opt"><input type="checkbox" value="9" onchange="updateHogiChips()"> 9호기</label>
-            <label class="multi-opt"><input type="checkbox" value="10" onchange="updateHogiChips()"> 10호기</label>
+            <div class="hogi-grid" id="io-hogi-grid">
+              <label class="hogi-opt"><span class="opt-label">1호기</span><input type="checkbox" value="1" onchange="updateHogiChips()"></label>
+              <label class="hogi-opt"><span class="opt-label">2호기</span><input type="checkbox" value="2" onchange="updateHogiChips()"></label>
+              <label class="hogi-opt"><span class="opt-label">3호기</span><input type="checkbox" value="3" onchange="updateHogiChips()"></label>
+              <label class="hogi-opt"><span class="opt-label">4호기</span><input type="checkbox" value="4" onchange="updateHogiChips()"></label>
+              <label class="hogi-opt"><span class="opt-label">5호기</span><input type="checkbox" value="5" onchange="updateHogiChips()"></label>
+              <label class="hogi-opt"><span class="opt-label">6호기</span><input type="checkbox" value="6" onchange="updateHogiChips()"></label>
+              <label class="hogi-opt"><span class="opt-label">7호기</span><input type="checkbox" value="7" onchange="updateHogiChips()"></label>
+              <label class="hogi-opt"><span class="opt-label">8호기</span><input type="checkbox" value="8" onchange="updateHogiChips()"></label>
+              <label class="hogi-opt"><span class="opt-label">9호기</span><input type="checkbox" value="9" onchange="updateHogiChips()"></label>
+              <label class="hogi-opt"><span class="opt-label">10호기</span><input type="checkbox" value="10" onchange="updateHogiChips()"></label>
+            </div>
             <div class="hogi-add-row">
               <input type="text" id="io-hogi-custom" placeholder="직접 입력 후 추가 (예: 12)">
               <button type="button" onclick="addCustomHogi()">추가</button>
@@ -6853,6 +6863,25 @@ function setStatus(text, type='process') {
 }
 
 // ☁️ 구글 클라우드 시트에서 실시간 전체 데이터 받아오기
+function getFilteredLogsForExport(){
+  // 입출고 이력 탭에 현재 걸려있는 필터(현장/품목/구분)를 그대로 적용하고,
+  // 날짜 기준 내림차순(최신순)으로 정렬해서 반환
+  const fs = document.getElementById('log-filter-site')?.value || '';
+  const fi = document.getElementById('log-filter-item')?.value || '';
+  const ft = document.getElementById('log-filter-type')?.value || '';
+
+  let filtered = logs.filter(l => (!fs||l.site===fs) && (!fi||l.item===fi) && (!ft||l.type===ft));
+
+  filtered.sort((a, b) => {
+    const dateA = new Date(a.date).getTime() || 0;
+    const dateB = new Date(b.date).getTime() || 0;
+    if (dateA !== dateB) return dateB - dateA; // 내림차순 고정
+    return (b.id||'').localeCompare(a.id||'');
+  });
+
+  return filtered;
+}
+
 function exportToExcel(){
   try{
     if(typeof XLSX === 'undefined'){
@@ -6861,9 +6890,10 @@ function exportToExcel(){
     }
     const wb = XLSX.utils.book_new();
 
-    // 1) 입출고 이력 시트
+    // 1) 입출고 이력 시트 (현재 필터 적용 + 날짜 내림차순 정렬)
+    const exportLogs = getFilteredLogsForExport();
     const logHeader = ['날짜','구분','현장명','호기','품목명','수량','등록자','비고'];
-    const logRows = logs.map(l => [
+    const logRows = exportLogs.map(l => [
       l.date || '',
       l.type==='in' ? '입고' : '출고',
       l.site || '',
@@ -7214,7 +7244,7 @@ function populateSels(){
   const panel = document.getElementById('io-item-panel');
   const lf = document.getElementById('log-filter-item');
   lf.innerHTML = '<option value="">전체 품목</option>';
-  panel.innerHTML = inv.map(i=>`<label class="multi-opt"><input type="checkbox" value="${i.name}" onchange="updateItemChips()"> ${i.name}</label>`).join('');
+  panel.innerHTML = inv.map(i=>`<label class="multi-opt"><span class="opt-label">${i.name}</span><input type="checkbox" value="${i.name}" onchange="updateItemChips()"></label>`).join('');
   inv.forEach(i=>{
     lf.innerHTML += `<option value="${i.name}">${i.name}</option>`;
   });
@@ -7272,12 +7302,13 @@ function addCustomHogi(){
   const val = input.value.trim();
   if(!val) return;
   const panel = document.getElementById('io-hogi-panel');
+  const grid = document.getElementById('io-hogi-grid');
   let cb = [...panel.querySelectorAll('input')].find(c=>c.value===val);
   if(!cb){
     const label = document.createElement('label');
-    label.className = 'multi-opt';
-    label.innerHTML = `<input type="checkbox" value="${val}" onchange="updateHogiChips()" checked> ${val}호기`;
-    panel.insertBefore(label, panel.querySelector('.hogi-add-row'));
+    label.className = 'hogi-opt';
+    label.innerHTML = `<span class="opt-label">${val}호기</span><input type="checkbox" value="${val}" onchange="updateHogiChips()" checked>`;
+    grid.appendChild(label);
   } else {
     cb.checked = true;
   }
