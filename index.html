@@ -110,10 +110,11 @@ tr:hover td{background:#E6F1FB;}
 .multi-chip .mc-x:hover{color:#A32D2D;}
 .multi-panel{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1px solid #B5D4F4;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,0.15);max-height:220px;overflow-y:auto;z-index:30;display:none;}
 .multi-panel.show{display:block;}
-.multi-opt{display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:13px;cursor:pointer;justify-content:space-between;}
+.multi-opt{display:flex;align-items:center;gap:10px;padding:9px 12px;font-size:13px;cursor:pointer;justify-content:flex-start;}
 .multi-opt:hover{background:#E6F1FB;}
-.multi-opt .opt-label{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.multi-opt input{width:16px;height:16px;accent-color:#185FA5;flex-shrink:0;margin-left:10px;}
+.multi-opt .opt-label{flex:1 1 auto;min-width:0;white-space:normal;word-break:keep-all;overflow-wrap:break-word;line-height:1.35;}
+.multi-opt input{width:16px;height:16px;accent-color:#185FA5;flex-shrink:0;margin:0;}
+.multi-cat-header{padding:6px 12px;font-size:12px;font-weight:500;color:#185FA5;background:#E6F1FB;position:sticky;top:0;}
 
 /* 호기 선택: 좌측 이름 - 우측 체크박스, 여백 최소화된 그리드 배치 */
 .hogi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:2px 4px;padding:8px 10px;}
@@ -277,6 +278,7 @@ tr:hover td{background:#E6F1FB;}
   /* 입출고 탭: input-row 세로 스택 */
   .input-row { flex-wrap: wrap; gap: 6px; }
   .input-row select, .input-row input { flex: 1 1 calc(50% - 3px); min-width: 0; }
+  #io-type { flex: 1 1 100%; }
   .site-wrap { flex: 1 1 100%; }
   .btn-reg { width: 100%; padding: 12px; font-size: 14px; }
 
@@ -603,6 +605,9 @@ tr:hover td{background:#E6F1FB;}
           <option value="out">출고</option>
           <option value="in">입고</option>
         </select>
+      </div>
+
+      <div class="input-row">
         <div class="multi-select" id="io-item-multi">
           <div class="multi-box" id="io-item-box" onclick="toggleMultiPanel('io-item-panel')">
             <span class="multi-placeholder">품목 선택 (다중 가능)</span>
@@ -7288,7 +7293,14 @@ function populateSels(){
   const panel = document.getElementById('io-item-panel');
   const lf = document.getElementById('log-filter-item');
   lf.innerHTML = '<option value="">전체 품목</option>';
-  panel.innerHTML = inv.map(i=>`<label class="multi-opt"><span class="opt-label">${i.name}</span><input type="checkbox" value="${i.name}" onchange="updateItemChips()"></label>`).join('');
+  const itemGroups = [...CATEGORY_ORDER, "기타"].map(cat => ({
+    category: cat,
+    items: inv.filter(i => categoryOf(i.name) === cat)
+  })).filter(g => g.items.length > 0);
+  panel.innerHTML = itemGroups.map(g => `
+    <div class="multi-cat-header">${g.category}</div>
+    ${g.items.map(i=>`<label class="multi-opt"><input type="checkbox" value="${i.name}" onchange="updateItemChips()"><span class="opt-label">${i.name}</span></label>`).join('')}
+  `).join('');
   inv.forEach(i=>{
     lf.innerHTML += `<option value="${i.name}">${i.name}</option>`;
   });
